@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const { PerfilEmpleador, Empleador, User } = require('../models');
+const { PerfilEmpleador, Empleador, CompleteProfileForm } = require('../models');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
@@ -12,28 +12,32 @@ const path = require('path');
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ==========================================================
-// 🔹 Obtener solo el nombre del empleador por userId
+// 🔹 Obtener datos del formulario para autocompletar
 // ==========================================================
-router.get('/nombre/:userId', async (req, res) => {
+router.get('/form/:formId', async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    if (isNaN(userId) || userId <= 0)
-      return res.status(400).json({ message: 'ID de usuario inválido' });
+    const formId = parseInt(req.params.formId, 10);
+    if (isNaN(formId) || formId <= 0)
+      return res.status(400).json({ message: 'ID de formulario inválido' });
 
-    const empleador = await Empleador.findOne({
-      where: { userId },
-      attributes: ['id', 'nombre'], // solo id y nombre
+    const form = await CompleteProfileForm.findByPk(formId);
+    if (!form) return res.status(404).json({ message: 'Formulario no encontrado' });
+
+    res.json({
+      nombre: form.nombre,
+      cedula_ruc: form.cedula_ruc,
+      telefono: form.telefono,
+      ubicacion: form.ubicacion,
+      categoria: form.categoria,
+      experiencia: form.experiencia,
+      biografia: form.biografia,
+      habilidades: form.habilidades,
+      fotoUrl: form.fotoUrl,
+      cvUrl: form.cvUrl,
     });
-
-    if (!empleador) return res.status(404).json({ message: 'Empleador no encontrado' });
-
-    res.json({ empleadorId: empleador.id, nombre: empleador.nombre });
   } catch (error) {
-    console.error('❌ Error al obtener el nombre del empleador:', error);
-    res.status(500).json({
-      message: 'Error al obtener el nombre del empleador',
-      error: error.message,
-    });
+    console.error('❌ Error al obtener datos del formulario:', error);
+    res.status(500).json({ message: 'Error al obtener datos del formulario', error: error.message });
   }
 });
 
@@ -54,6 +58,10 @@ router.post('/', upload.fields([{ name: 'foto' }, { name: 'cv' }]), async (req, 
     const existePerfil = await PerfilEmpleador.findOne({ where: { empleadorId: idNum } });
     if (existePerfil) return res.status(400).json({ message: 'El perfil ya existe, usa PUT para actualizar' });
 
+    // Traer datos de CompleteProfileForm para autocompletar
+    const form = await CompleteProfileForm.findOne({ where: { empleadorId: idNum } });
+    if (!form) return res.status(404).json({ message: 'Formulario de perfil no encontrado' });
+
     // Guardar archivos si existen
     let cvUrl = null;
     if (req.files?.cv?.length > 0) {
@@ -71,11 +79,14 @@ router.post('/', upload.fields([{ name: 'foto' }, { name: 'cv' }]), async (req, 
 
     const perfil = await PerfilEmpleador.create({
       empleadorId: idNum,
-      ubicacion: ubicacion || null,
-      categoria: categoria || null,
-      experiencia: experiencia ? parseInt(experiencia, 10) : 0,
-      biografia: biografia || null,
-      habilidades: habilidades ? JSON.parse(habilidades) : [],
+      nombre: form.nombre,           // solo lectura
+      cedula_ruc: form.cedula_ruc,   // solo lectura
+      telefono: form.telefono || null,
+      ubicacion: ubicacion || form.ubicacion || null,
+      categoria: categoria || form.categoria || null,
+      experiencia: experiencia ? parseInt(experiencia, 10) : form.experiencia || 0,
+      biografia: biografia || form.biografia || null,
+      habilidades: habilidades ? JSON.parse(habilidades) : form.habilidades || [],
       cvUrl,
       fotoUrl,
     });
@@ -117,6 +128,8 @@ router.put('/:empleadorId', upload.fields([{ name: 'foto' }, { name: 'cv' }]), a
       perfil.fotoUrl = `/uploads/fotos/${fotoName}`;
     }
 
+    // Actualizar campos permitidos (nombre y cedula_ruc no se modifican)
+    perfil.telefono = perfil.telefono || perfil.telefono;
     perfil.ubicacion = ubicacion ?? perfil.ubicacion;
     perfil.categoria = categoria ?? perfil.categoria;
     perfil.experiencia = experiencia ? parseInt(experiencia, 10) : perfil.experiencia;

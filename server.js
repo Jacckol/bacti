@@ -6,11 +6,16 @@ const passport = require('passport');
 const path = require('path');
 require('dotenv').config();
 
+// ==========================================================
 // 🔹 Routers
-const routes = require('./routes/index'); // rutas principales (usuarios, posts, etc.)
-const perfilEmpleadorRoutes = require('./routes/perfilEmpleadorRoutes'); // perfil de empleador
+// ==========================================================
+const routes = require('./routes/index'); // rutas principales
+const perfilEmpleadorRoutes = require('./routes/perfilEmpleadorRoutes'); // perfil empleador
+const perfilLaboralRoutes = require('./routes/perfilLaboral.routes');
 
+// ==========================================================
 // 🔹 Sequelize
+// ==========================================================
 const { sequelize } = require('./models');
 
 const app = express();
@@ -23,26 +28,27 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// ✅ Servir archivos subidos (fotos y CVs)
+// ✅ Servir archivos subidos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ==========================================================
 // 🔹 Passport JWT
 // ==========================================================
 app.use(passport.initialize());
-require('./config/passport')(passport); // config de JWT
+require('./config/passport')(passport); // configuración de JWT
 
 // ==========================================================
 // 🔹 Rutas
 // ==========================================================
-app.use(routes); // rutas principales
-app.use('/api/perfil-empleador', perfilEmpleadorRoutes); // perfil empleador
+app.use(routes);
+app.use('/api/perfil-empleador', perfilEmpleadorRoutes);
+app.use('/api/perfil-laboral', perfilLaboralRoutes); // ✅ nueva ruta
 
 // ==========================================================
 // 🔹 Sincronizar modelos con la base de datos
 // ==========================================================
 sequelize.sync({ alter: true })
-  .then(() => console.log('✅ Tablas sincronizadas'))
+  .then(() => console.log('✅ Tablas sincronizadas correctamente'))
   .catch(err => console.error('❌ Error sincronizando tablas:', err));
 
 // ==========================================================

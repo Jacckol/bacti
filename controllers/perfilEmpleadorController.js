@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { PerfilEmpleador, Empleador } = require('../models');
+const { PerfilEmpleador, Empleador, CompleteProfileForm } = require('../models');
 const multer = require('multer');
 
 // Configuración de multer para guardar archivos en memoria
@@ -23,6 +23,10 @@ exports.crearPerfil = async (req, res) => {
 
     const existePerfil = await PerfilEmpleador.findOne({ where: { empleadorId: idNum } });
     if (existePerfil) return res.status(400).json({ message: 'El perfil ya existe, usa PUT para actualizar' });
+
+    // Obtener datos del CompleteProfileForm para autocompletar
+    const form = await CompleteProfileForm.findOne({ where: { empleadorId: idNum } });
+    if (!form) return res.status(404).json({ message: 'No se encontró el formulario para autocompletar' });
 
     // Parsear habilidades
     let habilidadesArray = [];
@@ -50,14 +54,17 @@ exports.crearPerfil = async (req, res) => {
       fotoUrl = `/uploads/fotos/${fotoName}`;
     }
 
-    // Crear perfil
+    // Crear perfil usando datos autocompletados de CompleteProfileForm
     const perfil = await PerfilEmpleador.create({
       empleadorId: idNum,
-      ubicacion: ubicacion || null,
-      categoria: categoria || null,
-      experiencia: experiencia ? parseInt(experiencia, 10) : 0,
-      biografia: biografia || null,
-      habilidades: habilidadesArray,
+      nombre: form.nombre,           // 🔹 Solo lectura
+      cedula_ruc: form.cedula_ruc,   // 🔹 Solo lectura
+      telefono: form.telefono || null,
+      ubicacion: ubicacion || form.ubicacion || null,
+      categoria: categoria || form.categoria || null,
+      experiencia: experiencia ? parseInt(experiencia, 10) : form.experiencia || 0,
+      biografia: biografia || form.biografia || null,
+      habilidades: habilidadesArray.length ? habilidadesArray : form.habilidades || [],
       cvUrl,
       fotoUrl,
     });
@@ -108,7 +115,8 @@ exports.actualizarPerfil = async (req, res) => {
       perfil.fotoUrl = `/uploads/fotos/${fotoName}`;
     }
 
-    // Actualizar campos
+    // Actualizar campos **excepto nombre y cedula_ruc**
+    perfil.telefono = perfil.telefono || perfil.telefono; // opcional, puedes permitir actualizar si quieres
     perfil.ubicacion = ubicacion ?? perfil.ubicacion;
     perfil.categoria = categoria ?? perfil.categoria;
     perfil.experiencia = experiencia ? parseInt(experiencia, 10) : perfil.experiencia;
@@ -121,5 +129,38 @@ exports.actualizarPerfil = async (req, res) => {
   } catch (error) {
     console.error('❌ Error al actualizar perfil:', error);
     res.status(500).json({ message: 'Error al actualizar perfil', error: error.message });
+  }
+};
+
+// ==========================================================
+// 🔹 Obtener perfil desde CompleteProfileForm para autocompletar (GET)
+// ==========================================================
+exports.obtenerPerfilDesdeFormulario = async (req, res) => {
+  try {
+    const { formId } = req.params;
+
+    if (!formId || isNaN(parseInt(formId, 10))) {
+      return res.status(400).json({ message: 'ID de formulario inválido' });
+    }
+
+    const form = await CompleteProfileForm.findByPk(formId);
+
+    if (!form) return res.status(404).json({ message: 'Formulario no encontrado' });
+
+    res.json({
+      nombre: form.nombre,
+      telefono: form.telefono,
+      cedula_ruc: form.cedula_ruc,
+      ubicacion: form.ubicacion,
+      categoria: form.categoria,
+      experiencia: form.experiencia,
+      biografia: form.biografia,
+      habilidades: form.habilidades,
+      fotoUrl: form.fotoUrl,
+      cvUrl: form.cvUrl,
+    });
+  } catch (error) {
+    console.error('❌ Error al obtener datos del formulario:', error);
+    res.status(500).json({ message: 'Error al obtener datos del formulario', error: error.message });
   }
 };

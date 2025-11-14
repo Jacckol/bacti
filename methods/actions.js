@@ -1,5 +1,5 @@
-const { User } = require('../models');
-const { Post } = require('../models'); // si usas también Sequelize para posts
+'use strict';
+const { User, Post, PerfilLaboral } = require('../models'); // 🔹 Agregar PerfilLaboral
 const jwt = require('jwt-simple');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
@@ -35,7 +35,7 @@ const functions = {
     }
   },
 
-  // 🔹 Autenticación (Login)
+  // 🔹 Autenticación (Login) + verificar perfil completo
   authenticate: async function (req, res) {
     try {
       const { email, password } = req.body;
@@ -54,7 +54,7 @@ const functions = {
         return res.status(403).json({ success: false, msg: 'Contraseña incorrecta' });
       }
 
-      // Crear token
+      // 🔹 Crear token
       const payload = {
         id: user.id,
         nombre: user.nombre,
@@ -64,12 +64,20 @@ const functions = {
 
       const token = jwt.encode(payload, process.env.SECRET);
 
+      // 🔹 Verificar si perfil laboral ya existe (solo para empleador)
+      let perfilCompleto = false;
+      if (user.rol === 'empleador') {
+        const perfil = await PerfilLaboral.findOne({ where: { empleadorId: user.id } });
+        perfilCompleto = !!perfil; // true si ya existe
+      }
+
       return res.json({
         success: true,
         msg: 'Inicio de sesión exitoso',
         token,
         rol: user.rol,
         user: payload,
+        perfilCompleto, // 🔹 Nuevo campo para Flutter
       });
     } catch (error) {
       console.error('❌ Error en authenticate:', error);

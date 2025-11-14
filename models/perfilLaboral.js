@@ -2,19 +2,23 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class PerfilEmpleador extends Model {
+  class PerfilLaboral extends Model {
+    /**
+     * Define relaciones con otros modelos
+     */
     static associate(models) {
-      // 🔹 Un perfil pertenece a un Empleador
-      PerfilEmpleador.belongsTo(models.Empleador, {
+      // 🔹 Un perfil laboral pertenece a un empleador
+      PerfilLaboral.belongsTo(models.Empleador, {
         foreignKey: 'empleadorId',
-        as: 'empleadorInfo', // alias único
+        as: 'empleador',
         onDelete: 'CASCADE',
       });
     }
   }
 
-  PerfilEmpleador.init(
+  PerfilLaboral.init(
     {
+      // 🔹 ID del empleador (asignado automáticamente desde JWT)
       empleadorId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -24,54 +28,59 @@ module.exports = (sequelize, DataTypes) => {
         },
         onDelete: 'CASCADE',
       },
-      nombre: {              // 🔹 campo solo lectura
+
+      nombreCompleto: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      cedula_ruc: {          // 🔹 campo solo lectura
+
+      cedulaRuc: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      telefono: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      telefono: {            // 🔹 opcional
+
+      nombreComercial: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
       },
-      ubicacion: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
+
       categoria: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
       },
+
+      descripcion: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+
+      direccion: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+
+      horario: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+
       experiencia: {
         type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-      biografia: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      habilidades: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: [],
-      },
-      fotoUrl: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      cvUrl: {
-        type: DataTypes.STRING,
         allowNull: true,
       },
     },
     {
       sequelize,
-      modelName: 'PerfilEmpleador',
-      tableName: 'perfiles_empleadores',
+      modelName: 'PerfilLaboral',
+      tableName: 'perfiles_laborales',
       timestamps: true,
     }
   );
 
-  return PerfilEmpleador;
+  return PerfilLaboral;
 };

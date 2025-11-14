@@ -32,6 +32,7 @@ const User = require('./user')(sequelize, Sequelize.DataTypes);
 const Empleador = require('./empleador')(sequelize, Sequelize.DataTypes);
 const Trabajo = require('./trabajo')(sequelize, Sequelize.DataTypes);
 const PerfilEmpleador = require('./perfilEmpleador')(sequelize, Sequelize.DataTypes);
+const PerfilLaboral = require('./perfilLaboral')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
 // 🔹 Asociaciones entre modelos
@@ -40,40 +41,53 @@ const PerfilEmpleador = require('./perfilEmpleador')(sequelize, Sequelize.DataTy
 // 🧍 Un usuario tiene un empleador
 User.hasOne(Empleador, {
   foreignKey: 'userId',
-  as: 'empleador', // alias único
+  as: 'empleador',
   onDelete: 'CASCADE',
 });
 
 // 👔 Un empleador pertenece a un usuario
 Empleador.belongsTo(User, {
   foreignKey: 'userId',
-  as: 'user', // alias único
+  as: 'user',
 });
 
 // 💼 Un empleador tiene muchos trabajos
 Empleador.hasMany(Trabajo, {
   foreignKey: 'empleadorId',
-  as: 'trabajos', // alias único
+  as: 'trabajos',
   onDelete: 'CASCADE',
 });
 
 // 🔧 Un trabajo pertenece a un empleador
 Trabajo.belongsTo(Empleador, {
   foreignKey: 'empleadorId',
-  as: 'empleadorTrabajo', // 🔹 alias único
+  as: 'empleadorTrabajo',
 });
 
-// 🧩 Un empleador tiene un perfil
+// 🧩 Un empleador tiene un perfil empresarial
 Empleador.hasOne(PerfilEmpleador, {
   foreignKey: 'empleadorId',
-  as: 'perfil', // 🔹 alias único
+  as: 'perfil',
   onDelete: 'CASCADE',
 });
 
-// 🧩 Un perfil pertenece a un empleador
+// 🧩 Un perfil empresarial pertenece a un empleador
 PerfilEmpleador.belongsTo(Empleador, {
   foreignKey: 'empleadorId',
-  as: 'empleadorPerfil', // 🔹 alias único
+  as: 'empleadorPerfil',
+});
+
+// 🧩 Un empleador tiene un perfil laboral
+Empleador.hasOne(PerfilLaboral, {
+  foreignKey: 'empleadorId',
+  as: 'perfilLaboral',
+  onDelete: 'CASCADE',
+});
+
+// 🧩 Un perfil laboral pertenece a un empleador
+PerfilLaboral.belongsTo(Empleador, {
+  foreignKey: 'empleadorId',
+  as: 'empleadorLaboral',
 });
 
 // ==========================================================
@@ -86,10 +100,11 @@ const db = {
   Empleador,
   Trabajo,
   PerfilEmpleador,
+  PerfilLaboral,
 };
 
 // ==========================================================
-// 🔹 Ejecutar asociaciones automáticas si los modelos las definen
+// 🔹 Asociaciones automáticas si existen
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
@@ -98,6 +113,6 @@ Object.keys(db).forEach((modelName) => {
 });
 
 // ==========================================================
-// 🔹 Exportar el objeto db
+// 🔹 Exportar objeto db
 // ==========================================================
 module.exports = db;
