@@ -3,14 +3,11 @@ const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class PerfilLaboral extends Model {
-    /**
-     * Define relaciones con otros modelos
-     */
     static associate(models) {
-      // 🔹 Un perfil laboral pertenece a un empleador
-      PerfilLaboral.belongsTo(models.Empleador, {
-        foreignKey: 'empleadorId',
-        as: 'empleador',
+      // Un perfil laboral pertenece a un usuario (alias único)
+      PerfilLaboral.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'userPerfil',  // ✔ alias corregido (antes 'usuario')
         onDelete: 'CASCADE',
       });
     }
@@ -18,12 +15,11 @@ module.exports = (sequelize, DataTypes) => {
 
   PerfilLaboral.init(
     {
-      // 🔹 ID del empleador (asignado automáticamente desde JWT)
-      empleadorId: {
+      userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: 'empleadores',
+          model: 'users',
           key: 'id',
         },
         onDelete: 'CASCADE',

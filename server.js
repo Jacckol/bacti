@@ -7,11 +7,9 @@ const path = require('path');
 require('dotenv').config();
 
 // ==========================================================
-// 🔹 Routers
+// 🔹 Router principal (ÚNICO)
 // ==========================================================
-const routes = require('./routes/index'); // rutas principales
-const perfilEmpleadorRoutes = require('./routes/perfilEmpleadorRoutes'); // perfil empleador
-const perfilLaboralRoutes = require('./routes/perfilLaboral.routes');
+const routes = require('./routes/index'); // todas las rutas están ahí
 
 // ==========================================================
 // 🔹 Sequelize
@@ -28,21 +26,24 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// ✅ Servir archivos subidos
+// Servir archivos subidos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ==========================================================
 // 🔹 Passport JWT
 // ==========================================================
 app.use(passport.initialize());
-require('./config/passport')(passport); // configuración de JWT
+require('./config/passport')(passport);
 
 // ==========================================================
-// 🔹 Rutas
+// 🔹 Rutas (solo UNA VEZ)
 // ==========================================================
 app.use(routes);
-app.use('/api/perfil-empleador', perfilEmpleadorRoutes);
-app.use('/api/perfil-laboral', perfilLaboralRoutes); // ✅ nueva ruta
+
+// ❌ NO MÁS:
+// app.use('/api/perfil-laboral', perfilLaboralRoutes);
+// app.use('/api/empleadores', empleadorRoutes);
+// Porque ya están en routes/index.js
 
 // ==========================================================
 // 🔹 Sincronizar modelos con la base de datos
@@ -52,7 +53,7 @@ sequelize.sync({ alter: true })
   .catch(err => console.error('❌ Error sincronizando tablas:', err));
 
 // ==========================================================
-// 🔹 Conectar PostgreSQL
+// 🔹 Conexión con PostgreSQL
 // ==========================================================
 sequelize.authenticate()
   .then(() => console.log('✅ Conectado correctamente a PostgreSQL'))

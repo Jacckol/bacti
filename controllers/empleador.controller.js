@@ -1,88 +1,125 @@
-'use strict';
-const { PerfilEmpleador, Empleador } = require('../models');
+const { User, Empleador } = require('../models');
 
 module.exports = {
-  // 🟢 Crear o actualizar perfil del empleador
-  async crearOActualizarPerfil(req, res) {
+  // =====================================================
+  // OBTENER DATOS DEL EMPLEADOR POR userId
+  // =====================================================
+  async obtenerPorUser(req, res) {
     try {
-      const { empleadorId, ubicacion, categoria, experiencia, biografia, habilidades } = req.body;
+      const { userId } = req.params;
 
-      if (!empleadorId) {
-        return res.status(400).json({ message: 'Falta el ID del empleador.' });
-      }
-
-      // Buscar si ya existe un perfil para este empleador
-      let perfil = await PerfilEmpleador.findOne({ where: { empleadorId } });
-
-      if (perfil) {
-        // Actualizar si ya existe
-        await perfil.update({ ubicacion, categoria, experiencia, biografia, habilidades });
-        return res.json({ message: 'Perfil actualizado correctamente', perfil });
-      } else {
-        // Crear si no existe
-        const nuevoPerfil = await PerfilEmpleador.create({
-          empleadorId,
-          ubicacion,
-          categoria,
-          experiencia,
-          biografia,
-          habilidades,
-        });
-        return res.status(201).json({ message: 'Perfil creado correctamente', perfil: nuevoPerfil });
-      }
-    } catch (error) {
-      console.error('Error al crear o actualizar perfil:', error);
-      return res.status(500).json({ message: 'Error interno del servidor', error });
-    }
-  },
-
-  // 🟣 Obtener perfil por empleadorId
-  async obtenerPerfilPorEmpleador(req, res) {
-    try {
-      const { empleadorId } = req.params;
-      const perfil = await PerfilEmpleador.findOne({
-        where: { empleadorId },
-        include: [{ model: Empleador, as: 'empleador' }],
+      const empleador = await Empleador.findOne({
+        where: { userId },
+        include: [
+          { model: User, as: 'usuario', attributes: ['id', 'nombre', 'email', 'rol'] }
+        ]
       });
 
-      if (!perfil) {
-        return res.status(404).json({ message: 'Perfil no encontrado' });
+      if (!empleador) {
+        return res.status(404).json({ error: "El empleador no existe." });
       }
 
-      return res.json({ message: 'Perfil obtenido correctamente', perfil });
+      res.json(empleador);
     } catch (error) {
-      console.error('Error al obtener perfil:', error);
-      return res.status(500).json({ message: 'Error interno del servidor', error });
+      console.error("Error obtener empleador:", error);
+      res.status(500).json({ error: "Error interno al obtener el empleador." });
     }
   },
 
-  // 🟡 Listar todos los perfiles
-  async listarPerfiles(req, res) {
+  // =====================================================
+  // CREAR EMPLEADOR (solo si no existe)
+  // =====================================================
+  async crear(req, res) {
     try {
-      const perfiles = await PerfilEmpleador.findAll({
-        include: [{ model: Empleador, as: 'empleador' }],
+      const { empresa, ruc, telefono, userId } = req.body;
+
+      if (!empresa || !ruc || !telefono || !userId) {
+        return res.status(400).json({ error: "Faltan datos obligatorios." });
+      }
+
+      // Verificar si ya tiene registro de empleador
+      const existe = await Empleador.findOne({ where: { userId } });
+      if (existe) {
+        return res.status(400).json({ error: "El usuario ya tiene un perfil de empleador." });
+      }
+
+      const empleador = await Empleador.create({
+        empresa,
+        ruc,
+        telefono,
+        userId
       });
-      return res.json({ message: 'Perfiles obtenidos correctamente', perfiles });
+
+      res.status(201).json({ mensaje: "Empleador creado correctamente", empleador });
     } catch (error) {
-      console.error('Error al listar perfiles:', error);
-      return res.status(500).json({ message: 'Error interno del servidor', error });
+      console.error("Error crear empleador:", error);
+      res.status(500).json({ error: "Error interno al crear empleador." });
     }
   },
 
-  // 🔴 Eliminar perfil
-  async eliminarPerfil(req, res) {
+  // =====================================================
+  // ACTUALIZAR EMPLEADOR
+  // =====================================================
+  async actualizar(req, res) {
     try {
-      const { id } = req.params;
-      const perfil = await PerfilEmpleador.findByPk(id);
-      if (!perfil) {
-        return res.status(404).json({ message: 'Perfil no encontrado' });
+      const { userId } = req.params;
+      const datos = req.body;
+
+      const empleador = await Empleador.findOne({ where: { userId } });
+
+      if (!empleador) {
+        return res.status(404).json({ error: "El empleador no existe." });
       }
 
-      await perfil.destroy();
-      return res.json({ message: 'Perfil eliminado correctamente' });
+      await empleador.update(datos);
+
+      res.json({
+        mensaje: "Empleador actualizado correctamente",
+        empleador
+      });
     } catch (error) {
-      console.error('Error al eliminar perfil:', error);
-      return res.status(500).json({ message: 'Error interno del servidor', error });
+      console.error("Error actualizar empleador:", error);
+      res.status(500).json({ error: "Error interno al actualizar empleador." });
     }
   },
+
+  // =====================================================
+  // ELIMINAR PERFIL EMPLEADOR (solo los datos, no el usuario)
+  // =====================================================
+  async eliminar(req, res) {
+    try {
+      const { userId } = req.params;
+
+      const empleador = await Empleador.findOne({ where: { userId } });
+
+      if (!empleador) {
+        return res.status(404).json({ error: "El empleador no existe." });
+      }
+
+      await empleador.destroy();
+
+      res.json({ mensaje: "Perfil de empleador eliminado correctamente." });
+    } catch (error) {
+      console.error("Error eliminar empleador:", error);
+      res.status(500).json({ error: "Error interno al eliminar el empleador." });
+    }
+  },
+
+  // =====================================================
+  // LISTAR TODOS LOS EMPLEADORES
+  // =====================================================
+  async listar(req, res) {
+    try {
+      const empleadores = await Empleador.findAll({
+        include: [
+          { model: User, as: 'usuario', attributes: ['id', 'nombre', 'email', 'rol'] }
+        ]
+      });
+
+      res.json(empleadores);
+    } catch (error) {
+      console.error("Error listar empleadores:", error);
+      res.status(500).json({ error: "Error interno al listar empleadores." });
+    }
+  }
 };

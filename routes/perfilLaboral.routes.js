@@ -1,18 +1,23 @@
 'use strict';
+
 const express = require('express');
 const router = express.Router();
-const perfilLaboralController = require('../controllers/perfilLaboral.controller');
+const perfilController = require('../controllers/perfilLaboral.controller');
+const authMiddleware = require('../middlewares/auth'); // token obligatorio
 
-// 🔹 Crear un perfil laboral (sin token)
-router.post('/', perfilLaboralController.crearPerfilLaboral);
+// Crear perfil laboral
+router.post('/', authMiddleware, perfilController.crearPerfilLaboral);
 
-// 🔹 Obtener perfil laboral por default (sin token)
-router.get('/', perfilLaboralController.obtenerPerfilDelEmpleador);
+// Verificar si ya tiene perfil (USADO POR FLUTTER)
+router.get('/mine', authMiddleware, perfilController.verificarPerfilExistente);
 
-// 🔹 Actualizar perfil laboral por default (sin token)
-router.put('/', perfilLaboralController.actualizarPerfilLaboral);
+// Obtener mi perfil
+router.get('/', authMiddleware, perfilController.obtenerPerfilDelEmpleador);
 
-// 🔹 Obtener todos los perfiles laborales (sin token)
-router.get('/todos', perfilLaboralController.obtenerTodosPerfilesLaborales);
+// Actualizar perfil
+router.put('/', authMiddleware, perfilController.actualizarPerfilLaboral);
+
+// Obtener todos los perfiles
+router.get('/todos', perfilController.obtenerTodosPerfilesLaborales);
 
 module.exports = router;

@@ -2,62 +2,45 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class PerfilEmpleador extends Model {
+  class Empleador extends Model {
     static associate(models) {
-      PerfilEmpleador.belongsTo(models.Empleador, {
-        foreignKey: 'empleadorId',
-        as: 'empleador',
+      // Un empleador pertenece a un usuario
+      Empleador.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'empleadorUsuario'
       });
     }
   }
 
-  PerfilEmpleador.init(
+  Empleador.init(
     {
-      empleadorId: {
+      empresa: {
+        type: DataTypes.STRING,
+        allowNull: false
+      },
+      telefono: {
+        type: DataTypes.STRING,
+        allowNull: false
+      },
+
+      // Relación con User
+      userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: 'empleadores',
-          key: 'id',
+          model: 'users',
+          key: 'id'
         },
-        onDelete: 'CASCADE',
-      },
-      ubicacion: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      categoria: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      experiencia: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-      biografia: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      habilidades: {
-        type: DataTypes.ARRAY(DataTypes.STRING), // PostgreSQL soporta arrays
-        allowNull: true,
-      },
-     // calificacion: {
-       // type: DataTypes.FLOAT,
-       // allowNull: true,
-     // },
-     // trabajosCompletados: {
-      //  type: DataTypes.INTEGER,
-        //allowNull: true,
-     // },
+        onDelete: 'CASCADE'
+      }
     },
     {
       sequelize,
-      modelName: 'PerfilEmpleador',
-      tableName: 'perfiles_empleadores',
-      timestamps: true,
+      modelName: 'Empleador',
+      tableName: 'empleadores',
+      timestamps: true
     }
   );
 
-  return PerfilEmpleador;
+  return Empleador;
 };

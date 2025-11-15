@@ -2,54 +2,129 @@ const express = require('express');
 const router = express.Router();
 const { Empleador, User } = require('../models');
 
-// GET /api/empleadores -> lista todos los empleadores con info del usuario
+// ============================================
+// 🔹 LISTAR TODOS LOS EMPLEADORES
+// ============================================
 router.get('/', async (req, res) => {
   try {
     const empleadores = await Empleador.findAll({
       include: {
         model: User,
+        as: 'usuario',
         attributes: ['id', 'nombre', 'email', 'rol']
       }
     });
-    res.json({ message: 'Lista de empleadores obtenida', empleadores });
+
+    res.json({
+      message: 'Lista de empleadores obtenida correctamente.',
+      empleadores
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al obtener empleadores' });
+    console.error('Error al obtener empleadores:', error);
+    res.status(500).json({ error: 'Error al obtener empleadores.' });
   }
 });
 
-// POST /api/empleadores -> crear nuevo empleador
-router.post('/', async (req, res) => {
+// ============================================
+// 🔹 OBTENER UN EMPLEADOR POR ID
+// ============================================
+router.get('/:id', async (req, res) => {
   try {
-    const { empresa, telefono, rol, userId } = req.body;
+    const empleador = await Empleador.findByPk(req.params.id, {
+      include: {
+        model: User,
+        as: 'usuario',
+        attributes: ['id', 'nombre', 'email', 'rol']
+      }
+    });
 
-    if (!empresa || !telefono || !rol || !userId) {
-      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    if (!empleador) {
+      return res.status(404).json({ error: 'Empleador no encontrado.' });
     }
 
-    const user = await User.findByPk(userId);
-    if (!user) return res.status(404).json({ error: 'Usuario asociado no encontrado' });
-
-    const newEmpleador = await Empleador.create({ empresa, telefono, rol, userId });
-    res.status(201).json({ message: 'Empleador creado exitosamente', empleador: newEmpleador });
+    res.json({ empleador });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al crear empleador' });
+    console.error('Error al obtener empleador:', error);
+    res.status(500).json({ error: 'Error al obtener empleador.' });
   }
 });
 
-// DELETE /api/empleadores/:id -> eliminar un empleador
+// ============================================
+// 🔹 CREAR UN EMPLEADOR
+// ============================================
+router.post('/', async (req, res) => {
+  try {
+    const { empresa, ruc, telefono, userId } = req.body;
+
+    if (!empresa || !ruc || !telefono || !userId) {
+      return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
+    }
+
+    // Verificar que el usuario exista
+    const user = await User.findByPk(userId);
+    if (!user) return res.status(404).json({ error: 'Usuario asociado no encontrado.' });
+
+    const nuevoEmpleador = await Empleador.create({
+      empresa,
+      ruc,
+      telefono,
+      userId
+    });
+
+    res.status(201).json({
+      message: 'Empleador creado correctamente.',
+      empleador: nuevoEmpleador
+    });
+
+  } catch (error) {
+    console.error('Error al crear empleador:', error);
+    res.status(500).json({ error: 'Error al crear empleador.' });
+  }
+});
+
+// ============================================
+// 🔹 ACTUALIZAR UN EMPLEADOR
+// ============================================
+router.put('/:id', async (req, res) => {
+  try {
+    const { empresa, ruc, telefono } = req.body;
+
+    const empleador = await Empleador.findByPk(req.params.id);
+    if (!empleador) {
+      return res.status(404).json({ error: 'Empleador no encontrado.' });
+    }
+
+    await empleador.update({ empresa, ruc, telefono });
+
+    res.json({
+      message: 'Empleador actualizado correctamente.',
+      empleador
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar empleador:', error);
+    res.status(500).json({ error: 'Error al actualizar empleador.' });
+  }
+});
+
+// ============================================
+// 🔹 ELIMINAR UN EMPLEADOR
+// ============================================
 router.delete('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const empleador = await Empleador.findByPk(id);
-    if (!empleador) return res.status(404).json({ error: 'Empleador no encontrado' });
+    const empleador = await Empleador.findByPk(req.params.id);
+
+    if (!empleador) {
+      return res.status(404).json({ error: 'Empleador no encontrado.' });
+    }
 
     await empleador.destroy();
-    res.json({ message: 'Empleador eliminado exitosamente' });
+
+    res.json({ message: 'Empleador eliminado correctamente.' });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al eliminar empleador' });
+    console.error('Error al eliminar empleador:', error);
+    res.status(500).json({ error: 'Error al eliminar empleador.' });
   }
 });
 

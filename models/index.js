@@ -17,94 +17,69 @@ const sequelize = new Sequelize(
   }
 );
 
-// ==========================================================
-// 🔹 Comprobación de conexión
-// ==========================================================
+// Probar conexión
 sequelize
   .authenticate()
   .then(() => console.log('✅ Conectado correctamente a PostgreSQL'))
   .catch((err) => console.error('❌ Error al conectar a PostgreSQL:', err));
 
 // ==========================================================
+// 🔹 Crear objeto db (AQUÍ SE DEFINE ANTES DE USARLO)
+// ==========================================================
+const db = {};
+db.Sequelize = Sequelize;
+db.sequelize = sequelize;
+
+// ==========================================================
 // 🔹 Importar modelos
 // ==========================================================
-const User = require('./user')(sequelize, Sequelize.DataTypes);
-const Empleador = require('./empleador')(sequelize, Sequelize.DataTypes);
-const Trabajo = require('./trabajo')(sequelize, Sequelize.DataTypes);
-const PerfilEmpleador = require('./perfilEmpleador')(sequelize, Sequelize.DataTypes);
-const PerfilLaboral = require('./perfilLaboral')(sequelize, Sequelize.DataTypes);
+db.User = require('./user')(sequelize, Sequelize.DataTypes);
+db.Trabajo = require('./trabajo')(sequelize, Sequelize.DataTypes);
+db.Empleador = require('./empleador')(sequelize, Sequelize.DataTypes);
+db.PerfilLaboral = require('./perfilLaboral')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
-// 🔹 Asociaciones entre modelos
+// 🔹 Asociaciones
 // ==========================================================
 
-// 🧍 Un usuario tiene un empleador
-User.hasOne(Empleador, {
+// 1️⃣ Un usuario tiene muchos trabajos
+db.User.hasMany(db.Trabajo, {
+  foreignKey: 'userId',
+  as: 'trabajos',
+  onDelete: 'CASCADE',
+});
+
+db.Trabajo.belongsTo(db.User, {
+  foreignKey: 'userId',
+  as: 'autorTrabajo',
+});
+
+// 2️⃣ Un usuario tiene un empleador (perfil básico)
+db.User.hasOne(db.Empleador, {
   foreignKey: 'userId',
   as: 'empleador',
   onDelete: 'CASCADE',
 });
 
-// 👔 Un empleador pertenece a un usuario
-Empleador.belongsTo(User, {
+db.Empleador.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'user',
+  as: 'usuario',
 });
 
-// 💼 Un empleador tiene muchos trabajos
-Empleador.hasMany(Trabajo, {
-  foreignKey: 'empleadorId',
-  as: 'trabajos',
-  onDelete: 'CASCADE',
-});
-
-// 🔧 Un trabajo pertenece a un empleador
-Trabajo.belongsTo(Empleador, {
-  foreignKey: 'empleadorId',
-  as: 'empleadorTrabajo',
-});
-
-// 🧩 Un empleador tiene un perfil empresarial
-Empleador.hasOne(PerfilEmpleador, {
-  foreignKey: 'empleadorId',
-  as: 'perfil',
-  onDelete: 'CASCADE',
-});
-
-// 🧩 Un perfil empresarial pertenece a un empleador
-PerfilEmpleador.belongsTo(Empleador, {
-  foreignKey: 'empleadorId',
-  as: 'empleadorPerfil',
-});
-
-// 🧩 Un empleador tiene un perfil laboral
-Empleador.hasOne(PerfilLaboral, {
-  foreignKey: 'empleadorId',
+// 3️⃣ Un usuario tiene un perfil laboral (datos extras)
+db.User.hasOne(db.PerfilLaboral, {
+  foreignKey: 'userId',
   as: 'perfilLaboral',
   onDelete: 'CASCADE',
 });
 
-// 🧩 Un perfil laboral pertenece a un empleador
-PerfilLaboral.belongsTo(Empleador, {
-  foreignKey: 'empleadorId',
-  as: 'empleadorLaboral',
+db.PerfilLaboral.belongsTo(db.User, {
+  foreignKey: 'userId',
+  as: 'usuario',
 });
 
 // ==========================================================
-// 🔹 Registrar modelos en el objeto db
-// ==========================================================
-const db = {
-  sequelize,
-  Sequelize,
-  User,
-  Empleador,
-  Trabajo,
-  PerfilEmpleador,
-  PerfilLaboral,
-};
-
-// ==========================================================
-// 🔹 Asociaciones automáticas si existen
+// 🔹 Ejecutar associate() de cada modelo si existe
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
@@ -113,6 +88,6 @@ Object.keys(db).forEach((modelName) => {
 });
 
 // ==========================================================
-// 🔹 Exportar objeto db
+// 🔹 Exportar
 // ==========================================================
 module.exports = db;

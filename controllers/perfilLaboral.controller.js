@@ -1,12 +1,14 @@
 'use strict';
+
 const { PerfilLaboral } = require('../models');
 
-// 🔹 ID por defecto solo para pruebas
-const DEFAULT_EMPLEADOR_ID = 1;
-
-// 🔹 Crear un nuevo perfil laboral (sin token)
+// =========================================
+// 🔹 Crear perfil laboral
+// =========================================
 exports.crearPerfilLaboral = async (req, res) => {
   try {
+    const userId = req.user.id; // viene del token
+
     const {
       nombreCompleto,
       cedulaRuc,
@@ -16,11 +18,18 @@ exports.crearPerfilLaboral = async (req, res) => {
       descripcion,
       direccion,
       horario,
-      experiencia,
+      experiencia
     } = req.body;
 
+    // Verificar si ya existe un perfil para este usuario
+    const existente = await PerfilLaboral.findOne({ where: { userId } });
+    if (existente) {
+      return res.status(400).json({ message: 'El perfil ya existe' });
+    }
+
+    // Crear el perfil
     const perfil = await PerfilLaboral.create({
-      empleadorId: DEFAULT_EMPLEADOR_ID, // 🔹 Se asigna por defecto
+      userId,
       nombreCompleto,
       cedulaRuc,
       telefono,
@@ -29,68 +38,109 @@ exports.crearPerfilLaboral = async (req, res) => {
       descripcion,
       direccion,
       horario,
-      experiencia,
+      experiencia
     });
 
-    res.status(201).json({
-      message: 'Perfil laboral creado correctamente',
-      perfil,
+    return res.status(201).json({
+      message: 'Perfil creado correctamente',
+      perfil
     });
+
   } catch (error) {
-    console.error('Error al crear el perfil laboral:', error);
-    res.status(500).json({ message: 'Error al crear el perfil laboral', error });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al crear perfil laboral' });
   }
 };
 
-// 🔹 Obtener perfil laboral por empleadorId (sin token)
+// =========================================
+// 🔹 Obtener el perfil del usuario logueado
+// =========================================
 exports.obtenerPerfilDelEmpleador = async (req, res) => {
   try {
-    const empleadorId = DEFAULT_EMPLEADOR_ID; // 🔹 Por defecto
+    const userId = req.user.id;
 
-    const perfil = await PerfilLaboral.findOne({ where: { empleadorId } });
+    const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
     if (!perfil) {
-      return res.status(404).json({ message: 'Perfil laboral no encontrado' });
+      return res.status(404).json({ message: 'No tienes perfil creado aún' });
     }
 
-    res.json(perfil);
+    return res.json({
+      message: 'Perfil obtenido correctamente',
+      perfil
+    });
+
   } catch (error) {
-    console.error('Error al obtener perfil laboral:', error);
-    res.status(500).json({ message: 'Error al obtener perfil laboral', error });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al obtener perfil' });
   }
 };
 
-// 🔹 Actualizar perfil laboral por empleadorId (sin token)
-exports.actualizarPerfilLaboral = async (req, res) => {
+// =========================================
+// 🔹 Verificar si el perfil existe (para Flutter)
+//    GET /api/perfil-laboral/mine
+// =========================================
+exports.verificarPerfilExistente = async (req, res) => {
   try {
-    const empleadorId = DEFAULT_EMPLEADOR_ID; // 🔹 Por defecto
+    const userId = req.user.id;
 
-    const perfil = await PerfilLaboral.findOne({ where: { empleadorId } });
+    const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
     if (!perfil) {
-      return res.status(404).json({ message: 'Perfil laboral no encontrado' });
+      return res.status(404).json({ message: 'No existe perfil' });
+    }
+
+    return res.status(200).json({
+      message: 'Perfil ya existe',
+      perfil
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error en verificación' });
+  }
+};
+
+// =========================================
+// 🔹 Actualizar perfil laboral
+// =========================================
+exports.actualizarPerfilLaboral = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const perfil = await PerfilLaboral.findOne({ where: { userId } });
+
+    if (!perfil) {
+      return res.status(404).json({ message: 'No tienes perfil creado aún' });
     }
 
     await perfil.update(req.body);
 
-    res.json({ message: 'Perfil actualizado correctamente', perfil });
+    return res.json({
+      message: 'Perfil actualizado correctamente',
+      perfil
+    });
+
   } catch (error) {
-    console.error('Error al actualizar perfil laboral:', error);
-    res.status(500).json({ message: 'Error al actualizar perfil laboral', error });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al actualizar perfil laboral' });
   }
 };
 
-// 🔹 Obtener todos los perfiles laborales (opcional para pruebas)
+// =========================================
+// 🔹 Obtener todos los perfiles
+// =========================================
 exports.obtenerTodosPerfilesLaborales = async (req, res) => {
   try {
     const perfiles = await PerfilLaboral.findAll();
 
-    res.json({
-      message: 'Perfiles laborales obtenidos correctamente',
-      perfiles,
+    return res.json({
+      message: 'Perfiles obtenidos correctamente',
+      perfiles
     });
+
   } catch (error) {
-    console.error('Error al obtener perfiles laborales:', error);
-    res.status(500).json({ message: 'Error al obtener perfiles laborales', error });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al obtener perfiles laborales' });
   }
 };

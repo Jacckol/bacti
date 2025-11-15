@@ -1,27 +1,39 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const action = require('../methods/actions'); // Métodos legacy
 
 // ===========================================================
-// 🔹 IMPORTAR RUTAS EXTERNAS
+// 🔹 IMPORTAR MÉTODOS LEGACY (actions.js)
 // ===========================================================
+const action = require('../methods/actions');
 
-// Rutas de usuario (registro, login, info)
+// ===========================================================
+// 🔹 IMPORTAR RUTAS MODERNAS
+// ===========================================================
 const userRoutes = require('./user.routes');
-router.use('/api', userRoutes); // → /api/register, /api/login, etc.
-
-// Rutas de empleador
 const empleadorRoutes = require('./empleador.routes');
-router.use('/api/empleadores', empleadorRoutes); // → /api/empleadores/*
-
-// Rutas de trabajos
+const perfilLaboralRoutes = require('./perfilLaboral.routes');
 const trabajoRoutes = require('./trabajo.routes');
-router.use('/api/trabajos', trabajoRoutes); // → /api/trabajos/publicar, etc.
 
-// Rutas de perfil de empleador
-const perfilEmpleadorRoutes = require('./perfilEmpleadorRoutes'); // ← archivo perfilEmpleadorRoutes.js
-router.use('/api/perfil-empleador', perfilEmpleadorRoutes); // → /api/perfil-empleador/:empleadorId
+// ===========================================================
+// 🔹 RUTAS BASE DEL API
+// ===========================================================
+
+// 🟦 Usuarios – register / login / getinfo
+router.use('/api', userRoutes);  
+// → POST /api/register, POST /api/login, GET /api/users ...
+
+// 🟩 Empleador – CRUD empleador
+router.use('/api/empleadores', empleadorRoutes);
+// → POST /api/empleadores, GET /api/empleadores/:id ...
+
+// 🟨 Perfil Laboral – formulario de primera vez
+router.use('/api/perfil-laboral', perfilLaboralRoutes);
+// → POST /api/perfil-laboral, GET /api/perfil-laboral, PUT ...
+
+// 🟧 Trabajos – publicar trabajos
+router.use('/api/trabajos', trabajoRoutes);
+// → POST /api/trabajos/publicar, GET /api/trabajos ...
 
 // ===========================================================
 // 🔹 RUTAS DE PRUEBA
@@ -30,41 +42,21 @@ router.get('/', (req, res) => res.send('THIS IS HOME'));
 router.get('/dashboard', (req, res) => res.send('THIS IS DASHBOARD'));
 
 // ===========================================================
-// 🔹 MÉTODOS DE ACCIÓN (LEGADO DE actions.js)
+// 🔹 RUTAS LEGACY (actions.js) — mantener compatibilidad
 // ===========================================================
 
-// Registro de usuario
+// Auth legacy
 router.post('/api/register', action.addNew);
-
-// Login de usuario
 router.post('/api/login', action.authenticate);
-
-// Obtener información del usuario autenticado
 router.get('/api/getinfo', action.getinfo);
 
-// ===========================================================
-// 🔹 MÉTODOS PARA PUBLICACIONES (POSTS)
-// ===========================================================
-
-// Crear nuevo post
+// Posts legacy
 router.post('/api/addpost', action.addPost);
-
-// Obtener todos los posts
 router.get('/api/getallpost', action.getAllPost);
-
-// Obtener post por ID
 router.get('/api/getpostbyid/:id', action.getPostbyId);
-
-// Obtener posts por autor
 router.get('/api/getpostbyauthorid/:id', action.getPostbyAuthorId);
-
-// Buscar posts por título
 router.get('/api/searchpost/:title', action.searchPost);
-
-// Actualizar un post
 router.put('/api/updatepost/:id', action.updatePost);
-
-// Eliminar un post
 router.delete('/api/deletepost/:id', action.deletePost);
 
 // ===========================================================

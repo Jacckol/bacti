@@ -4,10 +4,10 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Trabajo extends Model {
     static associate(models) {
-      // Un trabajo pertenece a un empleador
-      this.belongsTo(models.Empleador, {
-        foreignKey: 'empleadorId',
-        as: 'empleador',
+      // Aquí solo se asocia con User si quieres
+      Trabajo.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'usuario',
       });
     }
   }
@@ -36,6 +36,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       presupuesto: {
         type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+      },
+      userId: { // ahora solo referencia a User
+        type: DataTypes.INTEGER,
         allowNull: false,
       },
     },
