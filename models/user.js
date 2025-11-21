@@ -23,13 +23,13 @@ module.exports = (sequelize, DataTypes) => {
       rol: {
         type: DataTypes.ENUM('cliente', 'empleador'),
         allowNull: false,
-      },
+      }
     },
     {
       sequelize,
       modelName: 'User',
-      tableName: 'users', // nombre exacto de la tabla
-      timestamps: true,   // crea createdAt y updatedAt
+      tableName: 'users',
+      timestamps: true
     }
   );
 

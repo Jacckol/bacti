@@ -17,69 +17,72 @@ const sequelize = new Sequelize(
   }
 );
 
-// Probar conexión
-sequelize
-  .authenticate()
-  .then(() => console.log('✅ Conectado correctamente a PostgreSQL'))
-  .catch((err) => console.error('❌ Error al conectar a PostgreSQL:', err));
-
 // ==========================================================
-// 🔹 Crear objeto db (AQUÍ SE DEFINE ANTES DE USARLO)
+// 🔹 Objeto principal db
 // ==========================================================
 const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // ==========================================================
-// 🔹 Importar modelos
+// 🔹 Importar modelos (cada uno en su archivo separado)
 // ==========================================================
-db.User = require('./user')(sequelize, Sequelize.DataTypes);
-db.Trabajo = require('./trabajo')(sequelize, Sequelize.DataTypes);
-db.Empleador = require('./empleador')(sequelize, Sequelize.DataTypes);
+db.User          = require('./User')(sequelize, Sequelize.DataTypes);
+db.Trabajo       = require('./Trabajo')(sequelize, Sequelize.DataTypes);
+db.Empleador     = require('./Empleador')(sequelize, Sequelize.DataTypes);
 db.PerfilLaboral = require('./perfilLaboral')(sequelize, Sequelize.DataTypes);
+db.Perfil        = require('./Perfil')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
-// 🔹 Asociaciones
+// 🔹 Asociaciones — SOLO AQUÍ, Y SIN DUPLICADOS
 // ==========================================================
 
-// 1️⃣ Un usuario tiene muchos trabajos
+// 1️⃣ Un usuario puede tener muchos trabajos
 db.User.hasMany(db.Trabajo, {
   foreignKey: 'userId',
   as: 'trabajos',
   onDelete: 'CASCADE',
 });
-
 db.Trabajo.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'autorTrabajo',
+  as: 'autor',         // 👈 CAMBIADO para no duplicar “usuario”
 });
 
-// 2️⃣ Un usuario tiene un empleador (perfil básico)
+// 2️⃣ Un usuario tiene un empleador
 db.User.hasOne(db.Empleador, {
   foreignKey: 'userId',
   as: 'empleador',
   onDelete: 'CASCADE',
 });
-
 db.Empleador.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'usuario',
+  as: 'dueño',         // 👈 CAMBIADO para evitar conflicto
 });
 
-// 3️⃣ Un usuario tiene un perfil laboral (datos extras)
+// 3️⃣ Perfil laboral antiguo (si lo sigues usando)
 db.User.hasOne(db.PerfilLaboral, {
   foreignKey: 'userId',
   as: 'perfilLaboral',
   onDelete: 'CASCADE',
 });
-
 db.PerfilLaboral.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'usuario',
+  as: 'usuarioPerfilLaboral',   // 👈 alias único
+});
+
+// 4️⃣ TU PERFIL NUEVO (tabla `perfil`)
+db.User.hasOne(db.Perfil, {
+  foreignKey: 'userId',
+  as: 'perfil',
+  onDelete: 'CASCADE',
+});
+db.Perfil.belongsTo(db.User, {
+  foreignKey: 'userId',
+  as: 'usuarioPerfil',          // 👈 alias único
 });
 
 // ==========================================================
-// 🔹 Ejecutar associate() de cada modelo si existe
+// 🔹 Ejecutar associate() si algún modelo lo trae
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
@@ -88,6 +91,6 @@ Object.keys(db).forEach((modelName) => {
 });
 
 // ==========================================================
-// 🔹 Exportar
+// 🔹 Exportar db
 // ==========================================================
 module.exports = db;

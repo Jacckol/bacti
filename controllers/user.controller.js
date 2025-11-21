@@ -1,4 +1,6 @@
-const { User, Empleador } = require('../models');
+'use strict';
+
+const { User, Empleador, PerfilLaboral } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -13,31 +15,25 @@ module.exports = {
     try {
       const { nombre, email, password, rol, empresa, ruc, telefono } = req.body;
 
-      // Validar campos básicos
       if (!nombre || !email || !password || !rol) {
         return res.status(400).json({ error: 'Faltan campos obligatorios del usuario.' });
       }
 
-      // Verificar si el correo ya existe
       const existe = await User.findOne({ where: { email } });
       if (existe) return res.status(400).json({ error: 'El correo ya está registrado' });
 
-      // Encriptar contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Crear usuario
       const user = await User.create({
         nombre,
         email,
         password: hashedPassword,
-        rol
+        rol,
       });
 
       let empleadorData = null;
 
-      // Si es empleador: crear registro en tabla Empleador
       if (rol === 'empleador') {
-
         if (!empresa || !ruc || !telefono) {
           return res.status(400).json({ error: 'Faltan datos obligatorios del empleador.' });
         }
@@ -46,7 +42,7 @@ module.exports = {
           empresa,
           ruc,
           telefono,
-          userId: user.id
+          userId: user.id,
         });
       }
 
@@ -56,9 +52,9 @@ module.exports = {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
-          rol: user.rol
+          rol: user.rol,
         },
-        empleador: empleadorData
+        empleador: empleadorData,
       });
 
     } catch (error) {
@@ -67,43 +63,47 @@ module.exports = {
     }
   },
 
-
   // ========================================
-  // LOGIN
+  // LOGIN COMPLETO (CON perfilCompleto)
   // ========================================
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      // Buscar usuario e incluir datos de Empleador (si los tiene)
       const user = await User.findOne({
         where: { email },
-        include: [{ model: Empleador, as: 'empleador' }]
+        include: [{ model: Empleador, as: 'empleador' }],
       });
 
       if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-      // Validar contraseña
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
 
-      // Crear token
       const token = jwt.sign(
         { id: user.id, rol: user.rol },
         JWT_SECRET,
         { expiresIn: '1d' }
       );
 
+      // 🔥 VERIFICAR PERFIL LABORAL
+      const perfil = await PerfilLaboral.findOne({
+        where: { userId: user.id },
+      });
+
+      const perfilCompleto = perfil ? true : false;
+
       return res.json({
         message: 'Login exitoso',
         token,
         rol: user.rol,
+        perfilCompleto, // 🔥 ENVIADO AL FRONT
         user: {
           id: user.id,
           nombre: user.nombre,
-          email: user.email
+          email: user.email,
         },
-        empleador: user.empleador || null
+        empleador: user.empleador || null,
       });
 
     } catch (err) {
@@ -112,14 +112,13 @@ module.exports = {
     }
   },
 
-
   // ========================================
   // LISTAR USUARIOS
   // ========================================
   async listar(req, res) {
     try {
       const users = await User.findAll({
-        include: [{ model: Empleador, as: 'empleador' }]
+        include: [{ model: Empleador, as: 'empleador' }],
       });
 
       res.json(users);
@@ -129,7 +128,6 @@ module.exports = {
       res.status(500).json({ error: error.message });
     }
   },
-
 
   // ========================================
   // ACTUALIZAR USUARIO
@@ -150,7 +148,7 @@ module.exports = {
 
       res.json({
         mensaje: 'Usuario actualizado',
-        user
+        user,
       });
 
     } catch (error) {
@@ -158,7 +156,6 @@ module.exports = {
       res.status(500).json({ error: error.message });
     }
   },
-
 
   // ========================================
   // ELIMINAR USUARIO
@@ -178,5 +175,5 @@ module.exports = {
       console.error('Error eliminar usuario:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 };

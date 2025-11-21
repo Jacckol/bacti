@@ -1,10 +1,10 @@
 'use strict';
 
-const { PerfilLaboral } = require('../models');
+const { PerfilLaboral, Empleador, User } = require('../models');
 
-// =========================================
-// 🔹 Crear perfil laboral
-// =========================================
+// =======================================================
+// 🔹 1. Crear perfil laboral
+// =======================================================
 exports.crearPerfilLaboral = async (req, res) => {
   try {
     const userId = req.user.id; // viene del token
@@ -47,14 +47,14 @@ exports.crearPerfilLaboral = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error al crear perfil:", error);
     return res.status(500).json({ message: 'Error al crear perfil laboral' });
   }
 };
 
-// =========================================
-// 🔹 Obtener el perfil del usuario logueado
-// =========================================
+// =======================================================
+// 🔹 2. Obtener perfil del usuario logueado
+// =======================================================
 exports.obtenerPerfilDelEmpleador = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -71,39 +71,35 @@ exports.obtenerPerfilDelEmpleador = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error obteniendo perfil:", error);
     return res.status(500).json({ message: 'Error al obtener perfil' });
   }
 };
 
-// =========================================
-// 🔹 Verificar si el perfil existe (para Flutter)
-//    GET /api/perfil-laboral/mine
-// =========================================
+// =======================================================
+// 🔹 3. Verificar si el perfil existe (USADO POR FLUTTER)
+//     GET /api/perfil-laboral/mine
+// =======================================================
 exports.verificarPerfilExistente = async (req, res) => {
   try {
     const userId = req.user.id;
 
     const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
-    if (!perfil) {
-      return res.status(404).json({ message: 'No existe perfil' });
-    }
-
-    return res.status(200).json({
-      message: 'Perfil ya existe',
-      perfil
+    // ⚠️ Flutter necesita esto exactamente:
+    return res.json({
+      exists: perfil ? true : false
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error verificando perfil:", error);
     return res.status(500).json({ message: 'Error en verificación' });
   }
 };
 
-// =========================================
-// 🔹 Actualizar perfil laboral
-// =========================================
+// =======================================================
+// 🔹 4. Actualizar perfil laboral
+// =======================================================
 exports.actualizarPerfilLaboral = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -122,14 +118,14 @@ exports.actualizarPerfilLaboral = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error actualizando perfil:", error);
     return res.status(500).json({ message: 'Error al actualizar perfil laboral' });
   }
 };
 
-// =========================================
-// 🔹 Obtener todos los perfiles
-// =========================================
+// =======================================================
+// 🔹 5. Obtener todos los perfiles laborales
+// =======================================================
 exports.obtenerTodosPerfilesLaborales = async (req, res) => {
   try {
     const perfiles = await PerfilLaboral.findAll();
@@ -140,7 +136,7 @@ exports.obtenerTodosPerfilesLaborales = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error obteniendo perfiles:", error);
     return res.status(500).json({ message: 'Error al obtener perfiles laborales' });
   }
 };
