@@ -25,64 +25,68 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // ==========================================================
-// 🔹 Importar modelos (cada uno en su archivo separado)
+// 🔹 Importar modelos
 // ==========================================================
-db.User          = require('./User')(sequelize, Sequelize.DataTypes);
-db.Trabajo       = require('./Trabajo')(sequelize, Sequelize.DataTypes);
-db.Empleador     = require('./Empleador')(sequelize, Sequelize.DataTypes);
+db.User        = require('./User')(sequelize, Sequelize.DataTypes);
+db.Trabajador  = require('./trabajador')(sequelize, Sequelize.DataTypes);  //
 db.PerfilLaboral = require('./perfilLaboral')(sequelize, Sequelize.DataTypes);
-db.Perfil        = require('./Perfil')(sequelize, Sequelize.DataTypes);
+db.Perfil      = require('./Perfil')(sequelize, Sequelize.DataTypes);
+db.Servicio    = require('./Servicio')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
-// 🔹 Asociaciones — SOLO AQUÍ, Y SIN DUPLICADOS
+// 🔹 Asociaciones claras y correctas
 // ==========================================================
 
-// 1️⃣ Un usuario puede tener muchos trabajos
-db.User.hasMany(db.Trabajo, {
+// 1️⃣ Usuario → Servicios (1:N)
+db.User.hasMany(db.Servicio, {
   foreignKey: 'userId',
-  as: 'trabajos',
+  as: 'servicios',
   onDelete: 'CASCADE',
 });
-db.Trabajo.belongsTo(db.User, {
+
+db.Servicio.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'autor',         // 👈 CAMBIADO para no duplicar “usuario”
+  as: 'autorServicio',
 });
 
-// 2️⃣ Un usuario tiene un empleador
-db.User.hasOne(db.Empleador, {
+// 2️⃣ Usuario → Trabajador (1:1)
+db.User.hasOne(db.Trabajador, {
   foreignKey: 'userId',
-  as: 'empleador',
+  as: 'trabajador',
   onDelete: 'CASCADE',
 });
-db.Empleador.belongsTo(db.User, {
+
+db.Trabajador.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'dueño',         // 👈 CAMBIADO para evitar conflicto
+  as: 'dueño',
 });
 
-// 3️⃣ Perfil laboral antiguo (si lo sigues usando)
+// 3️⃣ Usuario → Perfil Laboral antiguo (1:1)
 db.User.hasOne(db.PerfilLaboral, {
   foreignKey: 'userId',
   as: 'perfilLaboral',
   onDelete: 'CASCADE',
 });
+
 db.PerfilLaboral.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'usuarioPerfilLaboral',   // 👈 alias único
+  as: 'usuarioPerfilLaboral',
 });
 
-// 4️⃣ TU PERFIL NUEVO (tabla `perfil`)
+// 4️⃣ Usuario → Perfil Profesional nuevo (1:1)
 db.User.hasOne(db.Perfil, {
   foreignKey: 'userId',
   as: 'perfil',
   onDelete: 'CASCADE',
 });
+
 db.Perfil.belongsTo(db.User, {
   foreignKey: 'userId',
-  as: 'usuarioPerfil',          // 👈 alias único
+  as: 'usuarioPerfil',
 });
 
 // ==========================================================
-// 🔹 Ejecutar associate() si algún modelo lo trae
+// 🔹 Ejecutar associate() si algún modelo lo implementa
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {

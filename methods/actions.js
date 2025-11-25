@@ -1,6 +1,6 @@
 'use strict';
 
-const { User, Empleador, Post } = require('../models'); 
+const { User, Trabajador, Post } = require('../models');
 const jwt = require('jwt-simple');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
@@ -49,7 +49,6 @@ const functions = {
   // =============================
   authenticate: async function (req, res) {
     try {
-
       const { email, password } = req.body;
 
       if (!email || !password) {
@@ -77,13 +76,13 @@ const functions = {
       const token = jwt.encode(payload, process.env.SECRET);
 
       // =============================
-      // 📌 Verificar si perfil está completo (empleador)
+      // 📌 Verificar si perfil está completo (TRABAJADOR)
       // =============================
       let perfilCompleto = false;
 
-      if (user.rol === 'empleador') {
-        const empleador = await Empleador.findOne({ where: { userId: user.id } });
-        perfilCompleto = !!empleador;
+      if (user.rol === 'trabajador') {
+        const trabajador = await Trabajador.findOne({ where: { userId: user.id } });
+        perfilCompleto = !!trabajador;
       }
 
       return res.json({
@@ -127,9 +126,8 @@ const functions = {
   },
 
   // =============================
-  // 📌 CRUD POSTS
+  // 📌 CRUD POSTS (Legacy)
   // =============================
-
   addPost: async function (req, res) {
     try {
       const { title, body, author, author_id } = req.body;

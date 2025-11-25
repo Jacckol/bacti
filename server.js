@@ -40,10 +40,6 @@ require('./config/passport')(passport);
 // ==========================================================
 app.use(routes);
 
-// ❌ NO MÁS:
-// app.use('/api/perfil-laboral', perfilLaboralRoutes);
-// app.use('/api/empleadores', empleadorRoutes);
-// Porque ya están en routes/index.js
 
 // ==========================================================
 // 🔹 Sincronizar modelos con la base de datos

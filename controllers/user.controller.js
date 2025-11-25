@@ -1,6 +1,6 @@
 'use strict';
 
-const { User, Empleador, PerfilLaboral } = require('../models');
+const { User, Trabajador, PerfilLaboral } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -8,20 +8,22 @@ const JWT_SECRET = 'TU_SECRETO_JWT_AQUI';
 
 module.exports = {
 
-  // ========================================
+  // =====================================================
   // REGISTRO
-  // ========================================
+  // =====================================================
   async registrar(req, res) {
     try {
-      const { nombre, email, password, rol, empresa, ruc, telefono } = req.body;
+      const { nombre, email, password, rol, telefono, direccion, categoria, experiencia, descripcion } = req.body;
 
       if (!nombre || !email || !password || !rol) {
         return res.status(400).json({ error: 'Faltan campos obligatorios del usuario.' });
       }
 
+      // Verificar email
       const existe = await User.findOne({ where: { email } });
-      if (existe) return res.status(400).json({ error: 'El correo ya está registrado' });
+      if (existe) return res.status(400).json({ error: 'El correo ya está registrado.' });
 
+      // Crear usuario
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create({
@@ -31,17 +33,16 @@ module.exports = {
         rol,
       });
 
-      let empleadorData = null;
+      let trabajadorData = null;
 
-      if (rol === 'empleador') {
-        if (!empresa || !ruc || !telefono) {
-          return res.status(400).json({ error: 'Faltan datos obligatorios del empleador.' });
-        }
-
-        empleadorData = await Empleador.create({
-          empresa,
-          ruc,
-          telefono,
+      // Si el rol es TRABAJADOR → crear registro
+      if (rol === 'trabajador') {
+        trabajadorData = await Trabajador.create({
+          telefono: telefono || null,
+          direccion: direccion || null,
+          categoria: categoria || null,
+          experiencia: experiencia || null,
+          descripcion: descripcion || null,
           userId: user.id,
         });
       }
@@ -54,7 +55,7 @@ module.exports = {
           email: user.email,
           rol: user.rol,
         },
-        empleador: empleadorData,
+        trabajador: trabajadorData,
       });
 
     } catch (error) {
@@ -63,22 +64,22 @@ module.exports = {
     }
   },
 
-  // ========================================
-  // LOGIN COMPLETO (CON perfilCompleto)
-  // ========================================
+  // =====================================================
+  // LOGIN (con trabajador incluido)
+  // =====================================================
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
       const user = await User.findOne({
         where: { email },
-        include: [{ model: Empleador, as: 'empleador' }],
+        include: [{ model: Trabajador, as: 'trabajador' }],
       });
 
-      if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+      if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
       const valid = await bcrypt.compare(password, user.password);
-      if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta' });
+      if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta.' });
 
       const token = jwt.sign(
         { id: user.id, rol: user.rol },
@@ -86,7 +87,7 @@ module.exports = {
         { expiresIn: '1d' }
       );
 
-      // 🔥 VERIFICAR PERFIL LABORAL
+      // Verificar perfil laboral (flujo antiguo)
       const perfil = await PerfilLaboral.findOne({
         where: { userId: user.id },
       });
@@ -97,28 +98,28 @@ module.exports = {
         message: 'Login exitoso',
         token,
         rol: user.rol,
-        perfilCompleto, // 🔥 ENVIADO AL FRONT
+        perfilCompleto,
         user: {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
         },
-        empleador: user.empleador || null,
+        trabajador: user.trabajador || null,
       });
 
     } catch (err) {
       console.error('Error login:', err);
-      res.status(500).json({ error: 'Error en login' });
+      res.status(500).json({ error: 'Error en login.' });
     }
   },
 
-  // ========================================
+  // =====================================================
   // LISTAR USUARIOS
-  // ========================================
+  // =====================================================
   async listar(req, res) {
     try {
       const users = await User.findAll({
-        include: [{ model: Empleador, as: 'empleador' }],
+        include: [{ model: Trabajador, as: 'trabajador' }],
       });
 
       res.json(users);
@@ -129,16 +130,16 @@ module.exports = {
     }
   },
 
-  // ========================================
+  // =====================================================
   // ACTUALIZAR USUARIO
-  // ========================================
+  // =====================================================
   async actualizar(req, res) {
     try {
       const { id } = req.params;
       const { nombre, email, password, rol } = req.body;
 
       const user = await User.findByPk(id);
-      if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+      if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
       if (password) {
         user.password = await bcrypt.hash(password, 10);
@@ -147,7 +148,7 @@ module.exports = {
       await user.update({ nombre, email, rol });
 
       res.json({
-        mensaje: 'Usuario actualizado',
+        mensaje: 'Usuario actualizado.',
         user,
       });
 
@@ -157,19 +158,19 @@ module.exports = {
     }
   },
 
-  // ========================================
+  // =====================================================
   // ELIMINAR USUARIO
-  // ========================================
+  // =====================================================
   async eliminar(req, res) {
     try {
       const { id } = req.params;
 
       const user = await User.findByPk(id);
-      if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+      if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
       await user.destroy();
 
-      res.json({ mensaje: 'Usuario eliminado' });
+      res.json({ mensaje: 'Usuario eliminado.' });
 
     } catch (error) {
       console.error('Error eliminar usuario:', error);

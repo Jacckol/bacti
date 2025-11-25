@@ -1,13 +1,13 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const { User, Empleador } = require('../models');
+const { User, Trabajador } = require('../models');
 const bcrypt = require('bcrypt');
 
-// POST /api/register -> Registrar usuario empleador o user normal
+// POST /api/register -> Registrar usuario trabajador o cliente
 router.post('/register', async (req, res) => {
   try {
-    const { nombre, email, password, rol, empresa, telefono } = req.body;
+    const { nombre, email, password, rol, telefono, direccion, categoria, experiencia, descripcion } = req.body;
 
     // Validación básica
     if (!nombre || !email || !password || !rol) {
@@ -29,24 +29,24 @@ router.post('/register', async (req, res) => {
       rol
     });
 
-    // Si es empleador, crear entrada en la tabla empleadores
-    let empleador = null;
-    if (rol === 'empleador') {
-      if (!empresa || !telefono) {
-        return res.status(400).json({ error: 'Faltan datos del empleador' });
-      }
+    // Si el rol es trabajador, crear su registro laboral
+    let trabajador = null;
 
-      empleador = await Empleador.create({
+    if (rol === 'trabajador') {
+      trabajador = await Trabajador.create({
         userId: newUser.id,
-        empresa,
-        telefono
+        telefono: telefono || null,
+        direccion: direccion || null,
+        categoria: categoria || null,
+        experiencia: experiencia || null,
+        descripcion: descripcion || null
       });
     }
 
     return res.status(201).json({
       message: 'Usuario registrado correctamente',
       user: newUser,
-      empleador
+      trabajador
     });
 
   } catch (err) {

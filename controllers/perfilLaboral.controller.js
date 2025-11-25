@@ -1,6 +1,6 @@
 'use strict';
 
-const { PerfilLaboral, Empleador, User } = require('../models');
+const { PerfilLaboral, Trabajador, User } = require('../models');
 
 // =======================================================
 // 🔹 1. Crear perfil laboral
@@ -53,9 +53,9 @@ exports.crearPerfilLaboral = async (req, res) => {
 };
 
 // =======================================================
-// 🔹 2. Obtener perfil del usuario logueado
+// 🔹 2. Obtener perfil del TRABAJADOR logueado
 // =======================================================
-exports.obtenerPerfilDelEmpleador = async (req, res) => {
+exports.obtenerPerfilDelTrabajador = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -78,7 +78,6 @@ exports.obtenerPerfilDelEmpleador = async (req, res) => {
 
 // =======================================================
 // 🔹 3. Verificar si el perfil existe (USADO POR FLUTTER)
-//     GET /api/perfil-laboral/mine
 // =======================================================
 exports.verificarPerfilExistente = async (req, res) => {
   try {
@@ -86,7 +85,6 @@ exports.verificarPerfilExistente = async (req, res) => {
 
     const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
-    // ⚠️ Flutter necesita esto exactamente:
     return res.json({
       exists: perfil ? true : false
     });
