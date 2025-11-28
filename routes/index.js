@@ -3,55 +3,42 @@
 const express = require('express');
 const router = express.Router();
 
-// ===========================================================
-// 🔹 IMPORTAR MÉTODOS LEGACY (sistema viejo)
-// ===========================================================
+// Legacy system
 const action = require('../methods/actions');
 
-// ===========================================================
-// 🔹 IMPORTAR RUTAS MODERNAS (SERVX NUEVO)
-// ===========================================================
+// Rutas modernas
 const userRoutes = require('./user.routes');
-const trabajadorRoutes = require('./trabajador.routes'); // 🔥 AHORA SÍ
+const trabajadorRoutes = require('./trabajador.routes');
 const perfilLaboralRoutes = require('./perfilLaboral.routes');
 const perfilRoutes = require('./perfil.routes');
 const servicioRoutes = require('./servicio.routes');
 
-// ===========================================================
-// 🔹 RUTAS MODERNAS (SERVX NEW SYSTEM)
-// ===========================================================
+// Rutas del módulo Empleador
+const empleadorRoutes = require('../empleador/routes/empleador.routes');
+const perfilEmpleadorRoutes = require('../empleador/routes/perfilEmpleadorRoutes');
+const trabajoRoutes = require('../empleador/routes/trabajo.routes');
+const postulacionRoutes = require('../empleador/routes/postulacion.routes');
+const notificacionRoutes = require('../empleador/routes/notificacion.routes');
 
-// 🟦 Usuarios (registro, login, datos)
+// RUTAS SERVX
 router.use('/api', userRoutes);
-
-// 🟩 Trabajadores 
 router.use('/api/trabajadores', trabajadorRoutes);
-
-// 🟨 Perfil laboral (viejo)
 router.use('/api/perfil-laboral', perfilLaboralRoutes);
-
-// 🟪 Perfil profesional moderno (nuevo)
 router.use('/api/perfil', perfilRoutes);
-
-// 🟧 Servicios — publicar, listar, editar, eliminar
 router.use('/api/servicios', servicioRoutes);
 
-// ===========================================================
-// 🔹 RUTAS DE PRUEBA
-// ===========================================================
-router.get('/', (req, res) => res.send('THIS IS HOME'));
-router.get('/dashboard', (req, res) => res.send('THIS IS DASHBOARD'));
+// RUTAS EMPLEADOR
+router.use('/api/empleadores', empleadorRoutes);
+router.use('/api/perfil-empleador', perfilEmpleadorRoutes);
+router.use('/api/trabajos', trabajoRoutes);
+router.use('/api/postulaciones', postulacionRoutes);
+router.use('/api/notificaciones', notificacionRoutes);
 
-// ===========================================================
-// 🔹 RUTAS LEGACY (sistema antiguo)
-// ===========================================================
-
-// 🟦 Auth legacy
+// LEGACY
 router.post('/api/register', action.addNew);
 router.post('/api/login', action.authenticate);
 router.get('/api/getinfo', action.getinfo);
 
-// 🟨 Posts legacy
 router.post('/api/addpost', action.addPost);
 router.get('/api/getallpost', action.getAllPost);
 router.get('/api/getpostbyid/:id', action.getPostbyId);
@@ -60,7 +47,8 @@ router.get('/api/searchpost/:title', action.searchPost);
 router.put('/api/updatepost/:id', action.updatePost);
 router.delete('/api/deletepost/:id', action.deletePost);
 
-// ===========================================================
-// 🔹 EXPORTAR ROUTER
-// ===========================================================
+// TEST
+router.get('/', (req, res) => res.send('THIS IS HOME'));
+router.get('/dashboard', (req, res) => res.send('THIS IS DASHBOARD'));
+
 module.exports = router;

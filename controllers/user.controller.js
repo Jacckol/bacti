@@ -1,6 +1,6 @@
 'use strict';
 
-const { User, Trabajador, PerfilLaboral } = require('../models');
+const { User, Trabajador, PerfilLaboral, Empleador } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -9,17 +9,22 @@ const JWT_SECRET = 'TU_SECRETO_JWT_AQUI';
 module.exports = {
 
   // =====================================================
-  // REGISTRO
+  // REGISTRO UNIFICADO
+  // (Crea usuario + trabajador o empleador según rol)
   // =====================================================
   async registrar(req, res) {
     try {
-      const { nombre, email, password, rol, telefono, direccion, categoria, experiencia, descripcion } = req.body;
+      const {
+        nombre, email, password, rol,
+        telefono, direccion, categoria, experiencia, descripcion,
+        empresa, ruc
+      } = req.body;
 
       if (!nombre || !email || !password || !rol) {
-        return res.status(400).json({ error: 'Faltan campos obligatorios del usuario.' });
+        return res.status(400).json({ error: 'Faltan campos obligatorios.' });
       }
 
-      // Verificar email
+      // Validar email existente
       const existe = await User.findOne({ where: { email } });
       if (existe) return res.status(400).json({ error: 'El correo ya está registrado.' });
 
@@ -34,15 +39,30 @@ module.exports = {
       });
 
       let trabajadorData = null;
+      let empleadorData = null;
 
-      // Si el rol es TRABAJADOR → crear registro
+      // ------------------------------
+      //    CREAR TRABAJADOR
+      // ------------------------------
       if (rol === 'trabajador') {
         trabajadorData = await Trabajador.create({
-          telefono: telefono || null,
-          direccion: direccion || null,
-          categoria: categoria || null,
-          experiencia: experiencia || null,
-          descripcion: descripcion || null,
+          telefono: telefono || "",
+          direccion: direccion || "",
+          categoria: categoria || "",
+          experiencia: experiencia || "",
+          descripcion: descripcion || "",
+          userId: user.id,
+        });
+      }
+
+      // ------------------------------
+      //    CREAR EMPLEADOR
+      // ------------------------------
+      if (rol === 'empleador') {
+        empleadorData = await Empleador.create({
+          empresa: empresa || "",
+          ruc: ruc || "",
+          telefono: telefono || "",
           userId: user.id,
         });
       }
@@ -53,19 +73,20 @@ module.exports = {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
-          rol: user.rol,
+          rol: user.rol
         },
         trabajador: trabajadorData,
+        empleador: empleadorData,
       });
 
     } catch (error) {
-      console.error('Error registrar usuario:', error);
+      console.error('ERROR REGISTRAR:', error);
       res.status(500).json({ error: 'Error interno al registrar usuario.' });
     }
   },
 
   // =====================================================
-  // LOGIN (con trabajador incluido)
+  // LOGIN UNIFICADO (JWT + trabajador + empleador)
   // =====================================================
   async login(req, res) {
     try {
@@ -73,7 +94,10 @@ module.exports = {
 
       const user = await User.findOne({
         where: { email },
-        include: [{ model: Trabajador, as: 'trabajador' }],
+        include: [
+          { model: Trabajador, as: 'trabajador' },
+          { model: Empleador, as: 'empleador' }
+        ],
       });
 
       if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -81,17 +105,15 @@ module.exports = {
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta.' });
 
+      // Generar token
       const token = jwt.sign(
         { id: user.id, rol: user.rol },
         JWT_SECRET,
         { expiresIn: '1d' }
       );
 
-      // Verificar perfil laboral (flujo antiguo)
-      const perfil = await PerfilLaboral.findOne({
-        where: { userId: user.id },
-      });
-
+      // Verificar perfil laboral (solo trabajadores antiguos)
+      const perfil = await PerfilLaboral.findOne({ where: { userId: user.id }});
       const perfilCompleto = perfil ? true : false;
 
       return res.json({
@@ -105,10 +127,11 @@ module.exports = {
           email: user.email,
         },
         trabajador: user.trabajador || null,
+        empleador: user.empleador || null,
       });
 
     } catch (err) {
-      console.error('Error login:', err);
+      console.error('ERROR LOGIN:', err);
       res.status(500).json({ error: 'Error en login.' });
     }
   },
@@ -118,14 +141,17 @@ module.exports = {
   // =====================================================
   async listar(req, res) {
     try {
-      const users = await User.findAll({
-        include: [{ model: Trabajador, as: 'trabajador' }],
+      const usuarios = await User.findAll({
+        include: [
+          { model: Trabajador, as: 'trabajador' },
+          { model: Empleador, as: 'empleador' }
+        ],
       });
 
-      res.json(users);
+      res.json(usuarios);
 
     } catch (error) {
-      console.error('Error listar usuarios:', error);
+      console.error('ERROR LISTAR:', error);
       res.status(500).json({ error: error.message });
     }
   },
@@ -147,13 +173,10 @@ module.exports = {
 
       await user.update({ nombre, email, rol });
 
-      res.json({
-        mensaje: 'Usuario actualizado.',
-        user,
-      });
+      res.json({ mensaje: 'Usuario actualizado.', user });
 
     } catch (error) {
-      console.error('Error actualizar usuario:', error);
+      console.error('ERROR ACTUALIZAR:', error);
       res.status(500).json({ error: error.message });
     }
   },
@@ -173,8 +196,9 @@ module.exports = {
       res.json({ mensaje: 'Usuario eliminado.' });
 
     } catch (error) {
-      console.error('Error eliminar usuario:', error);
+      console.error('ERROR ELIMINAR:', error);
       res.status(500).json({ error: error.message });
     }
   },
+
 };

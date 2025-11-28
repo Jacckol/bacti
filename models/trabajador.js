@@ -4,11 +4,8 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Trabajador extends Model {
     static associate(models) {
-      // Un trabajador pertenece a un usuario
-      Trabajador.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'usuario'
-      });
+      // ❗ NO DEFINIMOS belongsTo AQUÍ
+      // La asociación está en models/index.js
     }
   }
 
@@ -47,7 +44,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true
       },
 
-      // Relación con User
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false,

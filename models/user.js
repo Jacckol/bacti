@@ -2,7 +2,11 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {}
+  class User extends Model {
+    static associate(models) {
+   
+    }
+  }
 
   User.init(
     {
@@ -20,16 +24,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+
+      // 🔥 ROLES UNIFICADOS: trabajador + empleador
       rol: {
-        type: DataTypes.ENUM('cliente', 'trabajador'), // 🔥 CORREGIDO
+        type: DataTypes.ENUM('trabajador', 'empleador'),
         allowNull: false,
-      }
+      },
     },
     {
       sequelize,
       modelName: 'User',
       tableName: 'users',
-      timestamps: true
+      timestamps: true,
     }
   );
 

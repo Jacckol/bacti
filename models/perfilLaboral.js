@@ -4,12 +4,8 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class PerfilLaboral extends Model {
     static associate(models) {
-      // Un perfil laboral pertenece a un usuario (alias único)
-      PerfilLaboral.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'userPerfil',  // ✔ alias corregido (antes 'usuario')
-        onDelete: 'CASCADE',
-      });
+      // ❗ NO DEFINIMOS belongsTo AQUÍ
+      // La asociación está en models/index.js
     }
   }
 
