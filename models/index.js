@@ -34,17 +34,24 @@ db.Perfil         = require('./Perfil')(sequelize, Sequelize.DataTypes);
 db.Servicio       = require('./Servicio')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
-// 🔹 Importar MODELOS del módulo EMPLEADOR (tu amigo)
+// 🔹 Importar MODELOS (EMPLEADOR)
 // ==========================================================
 db.Empleador        = require('../empleador/models/empleador')(sequelize, Sequelize.DataTypes);
 db.Trabajo          = require('../empleador/models/trabajo')(sequelize, Sequelize.DataTypes);
 db.PerfilEmpleador  = require('../empleador/models/perfilEmpleador')(sequelize, Sequelize.DataTypes);
+db.Postulacion      = require('../empleador/models/postulacion')(sequelize, Sequelize.DataTypes);
+
+// ==========================================================
+// 🔹 Importar MODELO Solicitud del Trabajador
+// ==========================================================
+db.SolicitudTrabajo = require('./SolicitudTrabajo')(sequelize, Sequelize.DataTypes);
+
 
 // ==========================================================
 // 🔹 ASOCIACIONES (SERVX)
 // ==========================================================
 
-// 1️⃣ Usuario → Servicios (1:N)
+// Usuario → Servicios (1:N)
 db.User.hasMany(db.Servicio, {
   foreignKey: 'userId',
   as: 'servicios',
@@ -55,7 +62,7 @@ db.Servicio.belongsTo(db.User, {
   as: 'autorServicio',
 });
 
-// 2️⃣ Usuario → Trabajador (1:1)
+// Usuario → Trabajador (1:1)
 db.User.hasOne(db.Trabajador, {
   foreignKey: 'userId',
   as: 'trabajador',
@@ -66,7 +73,7 @@ db.Trabajador.belongsTo(db.User, {
   as: 'dueño',
 });
 
-// 3️⃣ Usuario → Perfil Laboral (1:1)
+// Usuario → Perfil Laboral (1:1)
 db.User.hasOne(db.PerfilLaboral, {
   foreignKey: 'userId',
   as: 'perfilLaboral',
@@ -77,7 +84,7 @@ db.PerfilLaboral.belongsTo(db.User, {
   as: 'usuarioPerfilLaboral',
 });
 
-// 4️⃣ Usuario → Perfil Profesional (1:1)
+// Usuario → Perfil Profesional (1:1)
 db.User.hasOne(db.Perfil, {
   foreignKey: 'userId',
   as: 'perfil',
@@ -88,11 +95,12 @@ db.Perfil.belongsTo(db.User, {
   as: 'usuarioPerfil',
 });
 
+
 // ==========================================================
 // 🔹 ASOCIACIONES (EMPLEADOR)
 // ==========================================================
 
-// 5️⃣ Usuario → Empleador (1:1)
+// Usuario → Empleador (1:1)
 db.User.hasOne(db.Empleador, {
   foreignKey: 'userId',
   as: 'empleador',
@@ -103,18 +111,20 @@ db.Empleador.belongsTo(db.User, {
   as: 'usuarioEmpleador',
 });
 
-// 6️⃣ Empleador → Trabajo (1:N)
+// Empleador → Trabajo (1:N)
 db.Empleador.hasMany(db.Trabajo, {
   foreignKey: 'empleadorId',
   as: 'trabajos',
   onDelete: 'CASCADE',
 });
+
+// Trabajo → Empleador (BELONGS TO) — alias único
 db.Trabajo.belongsTo(db.Empleador, {
   foreignKey: 'empleadorId',
-  as: 'dueñoTrabajo',
+  as: 'empleador', // ✔ Este es el alias correcto y ÚNICO
 });
 
-// 7️⃣ Empleador → Perfil Empleador (1:1)
+// Empleador → Perfil Empleador (1:1)
 db.Empleador.hasOne(db.PerfilEmpleador, {
   foreignKey: 'empleadorId',
   as: 'perfilEmpleador',
@@ -125,14 +135,39 @@ db.PerfilEmpleador.belongsTo(db.Empleador, {
   as: 'usuarioDelPerfil',
 });
 
+
 // ==========================================================
-// 🔹 Ejecutar associate() si existe
+// 🔹 ASOCIACIONES (SOLICITUDES DEL TRABAJADOR)
+// ==========================================================
+
+// Usuario (Trabajador) → Solicitudes (1:N)
+db.User.hasMany(db.SolicitudTrabajo, {
+  foreignKey: "userId",
+  as: "solicitudes",
+  onDelete: "CASCADE",
+});
+
+// Trabajo → Solicitudes (1:N)
+db.Trabajo.hasMany(db.SolicitudTrabajo, {
+  foreignKey: "trabajoId",
+  as: "solicitudesDeTrabajo",
+  onDelete: "CASCADE",
+});
+db.SolicitudTrabajo.belongsTo(db.Trabajo, {
+  foreignKey: "trabajoId",
+  as: "trabajoDelSolicitante",
+});
+
+
+// ==========================================================
+// 🔹 Ejecutar associate() si existe en modelos individuales
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
     db[modelName].associate(db);
   }
 });
+
 
 // ==========================================================
 // 🔹 Exportar db

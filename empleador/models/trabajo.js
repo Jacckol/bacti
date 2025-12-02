@@ -10,15 +10,26 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
       },
 
-      // 🔹 ID del EMPLEADOR (no del User)
+      // 🔵 NUEVO: usuario que creó el trabajo (TRABAJADOR)
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "SET NULL",
+      },
+
+      // 🟠 Empleador (si lo publica un EMPLEADOR)
       empleadorId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true, // antes estaba false y ROMPÍA todo
         references: {
           model: "empleadores",
           key: "id",
         },
-        onDelete: "CASCADE",
+        onDelete: "SET NULL",
       },
 
       titulo: {
@@ -58,15 +69,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  // ======================================================
-  // 🔹 ASOCIACIONES
-  // ======================================================
   Trabajo.associate = (models) => {
-    // Un trabajo pertenece a un empleador
-    Trabajo.belongsTo(models.Empleador, {
-      foreignKey: "empleadorId",
-      as: "autor",
-    });
+    // Relaciones opcionales si quieres
   };
 
   return Trabajo;

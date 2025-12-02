@@ -10,37 +10,37 @@ router.post("/", trabajoController.crear);
 
 // ===========================================================
 // 🔹 Listar trabajos con filtros
+//     GET /api/trabajos?estado=activo&categoria=algo&buscar=texto
 // ===========================================================
 router.get("/", trabajoController.listar);
 
 // ===========================================================
-// 🔹 Listar trabajos del EMPLEADOR
+// 🔹 Listar trabajos del EMPLEADOR (usando userId del usuario)
+//     GET /api/trabajos/mios/:userId
 // ===========================================================
-
-// ⚠️ VALIDAMOS QUE LA FUNCIÓN EXISTA
-if (typeof trabajoController.listarPorEmpleador === "function") {
-  router.get("/mios/:empleadorId", trabajoController.listarPorEmpleador);
-} else {
-  console.error("❌ ERROR: listarPorEmpleador NO está definido en trabajoController.js");
-}
+router.get("/mios/:userId", trabajoController.listarPorEmpleador);
 
 // ===========================================================
 // 🔹 Obtener trabajo por ID
+//     GET /api/trabajos/:id
 // ===========================================================
 router.get("/:id", trabajoController.obtenerUno);
 
 // ===========================================================
 // 🔹 Actualizar trabajo
+//     PUT /api/trabajos/:id
 // ===========================================================
 router.put("/:id", trabajoController.actualizar);
 
 // ===========================================================
 // 🔹 Cambiar estado (activo/pausado/finalizado)
+//     PATCH /api/trabajos/:id/estado
 // ===========================================================
 router.patch("/:id/estado", trabajoController.cambiarEstado);
 
 // ===========================================================
 // 🔹 Eliminar trabajo
+//     DELETE /api/trabajos/:id
 // ===========================================================
 router.delete("/:id", trabajoController.eliminar);
 

@@ -1,37 +1,45 @@
 "use strict";
 
-const { Trabajo, User, Empleador } = require("../../models");
+const { Trabajo, Empleador, User } = require("../../models");
 const { Op } = require("sequelize");
 
 module.exports = {
   // ======================================================
-  // 🔹 Crear trabajo
+  // 🔹 Crear trabajo (OFERTA)
   // ======================================================
   async crear(req, res) {
     try {
-      const { titulo, descripcion, salario, ubicacion, categoria, empleadorId } =
-        req.body;
+      const {
+        titulo,
+        descripcion,
+        salario,
+        ubicacion,
+        categoria,
+        userId,
+      } = req.body;
 
-      if (!titulo || !descripcion || !empleadorId) {
+      if (!titulo || !descripcion || !userId) {
         return res.status(400).json({
-          error: "titulo, descripcion y empleadorId son obligatorios",
+          error: "titulo, descripcion y userId son obligatorios",
         });
       }
 
-      // Confirmar que empleador existe
-      const empleador = await Empleador.findByPk(empleadorId);
+      const empleador = await Empleador.findOne({ where: { userId } });
+
       if (!empleador) {
-        return res.status(400).json({ error: "El empleador no existe" });
+        return res.status(400).json({
+          error: "No existe un empleador asociado a ese usuario",
+        });
       }
 
       const nuevo = await Trabajo.create({
         titulo,
         descripcion,
-        salario: salario || "",
+        salario: salario ? salario.toString() : "",
         ubicacion: ubicacion || "",
         categoria: categoria || "",
         estado: "activo",
-        empleadorId,
+        empleadorId: empleador.id,
       });
 
       return res.status(201).json({
@@ -40,19 +48,21 @@ module.exports = {
       });
     } catch (error) {
       console.error("❌ Error al crear trabajo:", error);
-      return res.status(500).json({ error: "Error al crear trabajo" });
+      return res.status(500).json({
+        error: "Error al crear trabajo",
+        detail: error.message,
+      });
     }
   },
 
   // ======================================================
-  // 🔹 Listar trabajos con filtros
+  // 🔹 Listar trabajos (para TRABAJADORES)
   // ======================================================
   async listar(req, res) {
     try {
       const { estado, categoria, buscar } = req.query;
 
       const where = {};
-
       if (estado) where.estado = estado;
       if (categoria) where.categoria = categoria;
 
@@ -65,10 +75,24 @@ module.exports = {
 
       const trabajos = await Trabajo.findAll({
         where,
+        include: [
+          {
+            model: Empleador,
+            as: "empleador",
+            attributes: ["id", "nombre", "telefono", "direccion"],
+            include: [
+              {
+                model: User,
+                as: "usuario",
+                attributes: ["id", "nombre", "email"]
+              }
+            ]
+          },
+        ],
         order: [["createdAt", "DESC"]],
       });
 
-      return res.json({ trabajos });
+      return res.json(trabajos);
     } catch (error) {
       console.error("❌ Error al listar trabajos:", error);
       return res.status(500).json({ error: "Error al listar trabajos" });
@@ -76,14 +100,20 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔹 Listar trabajos del empleador (ARREGLADO)
+  // 🔹 Listar trabajos del empleador (MIS PUBLICACIONES)
   // ======================================================
   async listarPorEmpleador(req, res) {
     try {
-      const { empleadorId } = req.params;
+      const { userId } = req.params;
+
+      const empleador = await Empleador.findOne({ where: { userId } });
+
+      if (!empleador) {
+        return res.json({ trabajos: [] });
+      }
 
       const trabajos = await Trabajo.findAll({
-        where: { empleadorId },
+        where: { empleadorId: empleador.id },
         order: [["createdAt", "DESC"]],
       });
 
@@ -97,18 +127,34 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔹 Obtener un trabajo
+  // 🔹 Obtener un trabajo por ID
   // ======================================================
   async obtenerUno(req, res) {
     try {
       const { id } = req.params;
-      const trabajo = await Trabajo.findByPk(id);
+
+      const trabajo = await Trabajo.findByPk(id, {
+        include: [
+          {
+            model: Empleador,
+            as: "empleador",
+            attributes: ["id", "nombre", "telefono", "direccion"],
+            include: [
+              {
+                model: User,
+                as: "usuario",
+                attributes: ["id", "nombre", "email"]
+              }
+            ]
+          },
+        ],
+      });
 
       if (!trabajo) {
         return res.status(404).json({ error: "Trabajo no encontrado" });
       }
 
-      return res.json({ trabajo });
+      return res.json(trabajo);
     } catch (error) {
       console.error("❌ Error al obtener trabajo:", error);
       return res.status(500).json({ error: "Error al obtener trabajo" });

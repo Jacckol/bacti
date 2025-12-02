@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
 module.exports = {
   async up(queryInterface, Sequelize) {
     const table = await queryInterface.describeTable("perfiles_empleadores");
 
-    // 🔍 Solo renombrar SI existe la columna userId
+    // 🔍 Verificar si existe userId antes de renombrar
     if (table.userId) {
       await queryInterface.renameColumn(
         "perfiles_empleadores",

@@ -13,38 +13,19 @@ module.exports = (sequelize, DataTypes) => {
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
       },
 
-      empresa: {
+      nombre: {
         type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      ruc: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      responsable: {
-        type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
 
       telefono: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
 
       direccion: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      foto_url: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -55,12 +36,15 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  // ❗ NO DEFINIMOS ASOCIACIONES AQUÍ
-  // TODAS ESTÁN EN models/index.js
-
-  Empleador.associate = function (models) {
-    // Vacío para evitar errores de Sequelize,
-    // pero dejado por compatibilidad
+  // ==========================================================
+  // 🔥 RELACIÓN CORRECTA
+  // Cada Empleador pertenece a 1 usuario
+  // ==========================================================
+  Empleador.associate = (models) => {
+    Empleador.belongsTo(models.User, {
+      foreignKey: "userId",
+      as: "usuario",
+    });
   };
 
   return Empleador;

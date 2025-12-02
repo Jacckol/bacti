@@ -1,6 +1,8 @@
 "use strict";
 
-const { Postulacion, User } = require("../../models");
+// 👈 IMPORTA SIEMPRE DESDE ../../models (subes 2 carpetas: .. = controllers → empleador, .. = empleador → raíz)
+const db = require("../../models");
+const { Postulacion, User } = db;
 
 module.exports = {
   // ======================================================
