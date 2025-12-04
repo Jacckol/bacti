@@ -3,38 +3,60 @@
 const express = require('express');
 const router = express.Router();
 
-// Legacy system
+// ==========================================================
+// 🔹 Legacy system
+// ==========================================================
 const action = require('../methods/actions');
 
-// Rutas modernas
+// ==========================================================
+// 🔹 Rutas modernas (SERVX)
+// ==========================================================
 const userRoutes = require('./user.routes');
 const trabajadorRoutes = require('./trabajador.routes');
 const perfilLaboralRoutes = require('./perfilLaboral.routes');
 const perfilRoutes = require('./perfil.routes');
 const servicioRoutes = require('./servicio.routes');
 
-// Rutas del módulo Empleador
+// ==========================================================
+// 🔹 RUTA DE BILLETERA (NUEVO - FUNCIONA 100%)
+// ==========================================================
+const transactionRoutes = require('./transaction.routes'); 
+
+// ==========================================================
+// 🔹 Rutas del módulo Empleador
+// ==========================================================
 const empleadorRoutes = require('../empleador/routes/empleador.routes');
 const perfilEmpleadorRoutes = require('../empleador/routes/perfilEmpleadorRoutes');
 const trabajoRoutes = require('../empleador/routes/trabajo.routes');
 const postulacionRoutes = require('../empleador/routes/postulacion.routes');
 const notificacionRoutes = require('../empleador/routes/notificacion.routes');
 
-// RUTAS SERVX
+// ==========================================================
+// 🔹 RUTAS SERVX
+// ==========================================================
 router.use('/api', userRoutes);
 router.use('/api/trabajadores', trabajadorRoutes);
 router.use('/api/perfil-laboral', perfilLaboralRoutes);
 router.use('/api/perfil', perfilRoutes);
 router.use('/api/servicios', servicioRoutes);
 
-// RUTAS EMPLEADOR
+// ==========================================================
+// 🔹 RUTAS EMPLEADOR
+// ==========================================================
 router.use('/api/empleadores', empleadorRoutes);
 router.use('/api/perfil-empleador', perfilEmpleadorRoutes);
 router.use('/api/trabajos', trabajoRoutes);
 router.use('/api/postulaciones', postulacionRoutes);
 router.use('/api/notificaciones', notificacionRoutes);
 
-// LEGACY
+// ==========================================================
+// 🔹 RUTA DE BILLETERA (NO ROMPE NADA)
+// ==========================================================
+router.use('/api/transactions', transactionRoutes);
+
+// ==========================================================
+// 🔹 LEGACY ROUTES
+// ==========================================================
 router.post('/api/register', action.addNew);
 router.post('/api/login', action.authenticate);
 router.get('/api/getinfo', action.getinfo);
@@ -47,7 +69,9 @@ router.get('/api/searchpost/:title', action.searchPost);
 router.put('/api/updatepost/:id', action.updatePost);
 router.delete('/api/deletepost/:id', action.deletePost);
 
-// TEST
+// ==========================================================
+// 🔹 TEST
+// ==========================================================
 router.get('/', (req, res) => res.send('THIS IS HOME'));
 router.get('/dashboard', (req, res) => res.send('THIS IS DASHBOARD'));
 

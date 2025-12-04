@@ -46,6 +46,10 @@ db.Postulacion      = require('../empleador/models/postulacion')(sequelize, Sequ
 // ==========================================================
 db.SolicitudTrabajo = require('./SolicitudTrabajo')(sequelize, Sequelize.DataTypes);
 
+// ==========================================================
+// 🔹 IMPORTAR MODELO DE TRANSACCIONES (billetera)
+// ==========================================================
+db.Transaction = require('./transaction')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
 // 🔹 ASOCIACIONES (SERVX)
@@ -95,7 +99,6 @@ db.Perfil.belongsTo(db.User, {
   as: 'usuarioPerfil',
 });
 
-
 // ==========================================================
 // 🔹 ASOCIACIONES (EMPLEADOR)
 // ==========================================================
@@ -118,10 +121,10 @@ db.Empleador.hasMany(db.Trabajo, {
   onDelete: 'CASCADE',
 });
 
-// Trabajo → Empleador (BELONGS TO) — alias único
+// Trabajo → Empleador
 db.Trabajo.belongsTo(db.Empleador, {
   foreignKey: 'empleadorId',
-  as: 'empleador', // ✔ Este es el alias correcto y ÚNICO
+  as: 'empleador',
 });
 
 // Empleador → Perfil Empleador (1:1)
@@ -134,7 +137,6 @@ db.PerfilEmpleador.belongsTo(db.Empleador, {
   foreignKey: 'empleadorId',
   as: 'usuarioDelPerfil',
 });
-
 
 // ==========================================================
 // 🔹 ASOCIACIONES (SOLICITUDES DEL TRABAJADOR)
@@ -158,16 +160,31 @@ db.SolicitudTrabajo.belongsTo(db.Trabajo, {
   as: "trabajoDelSolicitante",
 });
 
+// ==========================================================
+// 🔹 ASOCIACIONES (BILLETERA) — funcionando 100%
+// ==========================================================
+
+// Usuario → Transacciones (1:N)
+db.User.hasMany(db.Transaction, {
+  foreignKey: "userId",
+  as: "transacciones",
+  onDelete: "CASCADE",
+});
+
+// Transacción → Usuario (N:1)
+db.Transaction.belongsTo(db.User, {
+  foreignKey: "userId",
+  as: "usuarioTransaccion",
+});
 
 // ==========================================================
-// 🔹 Ejecutar associate() si existe en modelos individuales
+// 🔹 Ejecutar associate() si existe
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
     db[modelName].associate(db);
   }
 });
-
 
 // ==========================================================
 // 🔹 Exportar db
