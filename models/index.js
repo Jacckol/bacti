@@ -42,6 +42,11 @@ db.PerfilEmpleador  = require('../empleador/models/perfilEmpleador')(sequelize, 
 db.Postulacion      = require('../empleador/models/postulacion')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
+// 🔹 Importar MODELO DE NOTIFICACIONES (NUEVO)
+// ==========================================================
+db.Notificacion     = require('../empleador/models/notificacion')(sequelize, Sequelize.DataTypes);
+
+// ==========================================================
 // 🔹 Importar MODELO Solicitud del Trabajador
 // ==========================================================
 db.SolicitudTrabajo = require('./SolicitudTrabajo')(sequelize, Sequelize.DataTypes);
@@ -139,10 +144,27 @@ db.PerfilEmpleador.belongsTo(db.Empleador, {
 });
 
 // ==========================================================
+// 🔹 ASOCIACIONES (NOTIFICACIONES) — NUEVAS
+// ==========================================================
+
+// Un usuario tiene muchas notificaciones
+db.User.hasMany(db.Notificacion, {
+  foreignKey: "userId",
+  as: "notificaciones",
+  onDelete: "CASCADE",
+});
+
+// Cada notificación pertenece a un usuario
+db.Notificacion.belongsTo(db.User, {
+  foreignKey: "userId",
+  as: "usuarioNotificacion",
+});
+
+// ==========================================================
 // 🔹 ASOCIACIONES (SOLICITUDES DEL TRABAJADOR)
 // ==========================================================
 
-// Usuario (Trabajador) → Solicitudes (1:N)
+// Usuario → Solicitudes (1:N)
 db.User.hasMany(db.SolicitudTrabajo, {
   foreignKey: "userId",
   as: "solicitudes",
@@ -161,17 +183,14 @@ db.SolicitudTrabajo.belongsTo(db.Trabajo, {
 });
 
 // ==========================================================
-// 🔹 ASOCIACIONES (BILLETERA) — funcionando 100%
+// 🔹 ASOCIACIONES (BILLETERA)
 // ==========================================================
 
-// Usuario → Transacciones (1:N)
 db.User.hasMany(db.Transaction, {
   foreignKey: "userId",
   as: "transacciones",
   onDelete: "CASCADE",
 });
-
-// Transacción → Usuario (N:1)
 db.Transaction.belongsTo(db.User, {
   foreignKey: "userId",
   as: "usuarioTransaccion",

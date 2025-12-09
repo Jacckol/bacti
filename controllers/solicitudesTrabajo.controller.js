@@ -1,4 +1,5 @@
-const { SolicitudTrabajo, Trabajo } = require("../models");
+const { SolicitudTrabajo, Trabajo, Empleador } = require("../models");
+const { crearNotificacion } = require("../methods/notificar");
 
 module.exports = {
   // Crear solicitud (postular)
@@ -25,6 +26,20 @@ module.exports = {
         mensaje: mensaje || "",
         estado: "pendiente",
       });
+
+      // =======================
+      // 🔔 NOTIFICAR AL EMPLEADOR
+      // =======================
+      const trabajo = await Trabajo.findByPk(trabajoId);
+      const empleador = await Empleador.findByPk(trabajo.empleadorId);
+
+      if (empleador) {
+        await crearNotificacion(
+          empleador.userId,
+          "Nueva postulación recibida",
+          `Un trabajador se ha postulado a tu trabajo: "${trabajo.titulo}".`
+        );
+      }
 
       return res.json(nueva);
     } catch (e) {
@@ -67,6 +82,13 @@ module.exports = {
       solicitud.estado = "aceptada";
       await solicitud.save();
 
+      // 🔔 Notificar al TRABAJADOR
+      await crearNotificacion(
+        solicitud.userId,
+        "Postulación aceptada",
+        "Tu postulación ha sido aceptada por el empleador."
+      );
+
       return res.json({ mensaje: "Solicitud aceptada", solicitud });
     } catch (e) {
       console.log(e);
@@ -84,6 +106,13 @@ module.exports = {
 
       solicitud.estado = "rechazada";
       await solicitud.save();
+
+      // 🔔 Notificar al TRABAJADOR
+      await crearNotificacion(
+        solicitud.userId,
+        "Postulación rechazada",
+        "Tu postulación ha sido rechazada por el empleador."
+      );
 
       return res.json({ mensaje: "Solicitud rechazada", solicitud });
     } catch (e) {

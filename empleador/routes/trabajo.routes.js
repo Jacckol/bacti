@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const trabajoController = require("../controllers/trabajoController");
+const trabajoController = require("../controllers/trabajoController.js");
 
 // ===========================================================
 // 🔹 Crear trabajo (empleador crea oferta)

@@ -24,16 +24,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: "notificaciones",
-      timestamps: true,   // ✔ NECESARIO
+      timestamps: true,
     }
   );
-
-  Notificacion.associate = function (models) {
-    Notificacion.belongsTo(models.User, {
-      foreignKey: "userId",
-      as: "usuario",
-    });
-  };
 
   return Notificacion;
 };

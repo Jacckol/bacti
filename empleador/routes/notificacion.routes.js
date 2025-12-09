@@ -1,16 +1,15 @@
 const express = require("express");
 const router = express.Router();
 
-// 👇 IMPORTACIÓN CORRECTA (USA EL NOMBRE REAL DEL ARCHIVO)
 const notificacionController = require("../controllers/notificacionController");
 
-// Crear notificación
-router.post("/", notificacionController.crear);
+// Crear notificación manual (opcional)
+router.post("/", notificacionController.crearNotificacionManual);
 
-// Listar por usuario
-router.get("/:userId", notificacionController.listarPorUsuario);
+// Obtener notificaciones por usuario
+router.get("/:userId", notificacionController.getNotificacionesUsuario);
 
 // Marcar como leída
-router.put("/:id/leido", notificacionController.marcarLeido);
+router.put("/:id/leido", notificacionController.marcarNotificacionLeida);
 
 module.exports = router;

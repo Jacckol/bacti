@@ -4,7 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Trabajador extends Model {
     static associate(models) {
-      // ❗ NO DEFINIMOS belongsTo AQUÍ
       // La asociación está en models/index.js
     }
   }
@@ -27,10 +26,13 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true
       },
+
+      // 🔥🔥🔥 ARREGLADO → YA NO ES INTEGER
       experiencia: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: true
       },
+
       descripcion: {
         type: DataTypes.TEXT,
         allowNull: true

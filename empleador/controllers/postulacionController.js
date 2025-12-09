@@ -1,12 +1,12 @@
 "use strict";
 
-// 👈 IMPORTA SIEMPRE DESDE ../../models (subes 2 carpetas: .. = controllers → empleador, .. = empleador → raíz)
 const db = require("../../models");
-const { Postulacion, User } = db;
+const { Postulacion, User, Trabajo, Empleador } = db;
+const { crearNotificacion } = require("../../methods/notificar");
 
 module.exports = {
   // ======================================================
-  // 🔹 Crear postulación
+  // 🔹 Crear postulación (TRABAJADOR → EMPLEADOR)
   // ======================================================
   async crear(req, res) {
     try {
@@ -29,12 +29,27 @@ module.exports = {
         });
       }
 
+      // Crear postulación
       const nueva = await Postulacion.create({
         trabajoId,
         userId,
         mensaje: mensaje || "",
         estado: "pendiente",
       });
+
+      // =============================
+      // 🔔 NOTIFICAR AL EMPLEADOR
+      // =============================
+      const trabajo = await Trabajo.findByPk(trabajoId);
+      const empleador = await Empleador.findByPk(trabajo.empleadorId);
+
+      if (empleador) {
+        await crearNotificacion(
+          empleador.userId,
+          "Nueva postulación recibida",
+          `Un trabajador se ha postulado al trabajo: "${trabajo.titulo}".`
+        );
+      }
 
       return res.status(201).json({
         postulacion: nueva,
@@ -84,7 +99,6 @@ module.exports = {
       const { estado } = req.body;
 
       const validos = ["pendiente", "aceptado", "rechazado"];
-
       if (!validos.includes(estado)) {
         return res.status(400).json({
           error: "Estado inválido",
@@ -92,7 +106,6 @@ module.exports = {
       }
 
       const post = await Postulacion.findByPk(id);
-
       if (!post) {
         return res.status(404).json({
           error: "Postulación no encontrada",
@@ -101,6 +114,15 @@ module.exports = {
 
       post.estado = estado;
       await post.save();
+
+      // =============================
+      // 🔔 NOTIFICAR AL TRABAJADOR
+      // =============================
+      await crearNotificacion(
+        post.userId, 
+        "Actualización de tu postulación",
+        `Tu postulación fue ${estado}.`
+      );
 
       return res.json({ postulacion: post });
     } catch (err) {
