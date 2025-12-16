@@ -2,7 +2,9 @@ const { SolicitudTrabajo, Trabajo, Empleador } = require("../models");
 const { crearNotificacion } = require("../methods/notificar");
 
 module.exports = {
-  // Crear solicitud (postular)
+  // ======================================================
+  // 🔹 Crear solicitud (TRABAJADOR se postula)
+  // ======================================================
   async crear(req, res) {
     try {
       const { trabajoId, userId, mensaje } = req.body;
@@ -11,7 +13,7 @@ module.exports = {
         return res.status(400).json({ error: "Faltan datos" });
       }
 
-      // Ver si ya existe
+      // Verificar si ya existe postulación
       const existe = await SolicitudTrabajo.findOne({
         where: { trabajoId, userId },
       });
@@ -20,6 +22,7 @@ module.exports = {
         return res.status(400).json({ error: "Ya estás postulado" });
       }
 
+      // Crear solicitud
       const nueva = await SolicitudTrabajo.create({
         trabajoId,
         userId,
@@ -31,24 +34,31 @@ module.exports = {
       // 🔔 NOTIFICAR AL EMPLEADOR
       // =======================
       const trabajo = await Trabajo.findByPk(trabajoId);
+      if (!trabajo) {
+        return res.status(404).json({ error: "Trabajo no existe" });
+      }
+
       const empleador = await Empleador.findByPk(trabajo.empleadorId);
 
       if (empleador) {
-        await crearNotificacion(
-          empleador.userId,
-          "Nueva postulación recibida",
-          `Un trabajador se ha postulado a tu trabajo: "${trabajo.titulo}".`
-        );
+        await crearNotificacion(empleador.userId, {
+          titulo: "Nueva postulación recibida",
+          mensaje: `Un trabajador se ha postulado a tu trabajo: "${trabajo.titulo}".`,
+          trabajoId: trabajo.id,       // 🔥 CLAVE
+          empleadorId: empleador.id,
+        });
       }
 
       return res.json(nueva);
     } catch (e) {
-      console.log(e);
+      console.error(e);
       res.status(500).json({ error: "Error al crear solicitud" });
     }
   },
 
-  // Obtener mis solicitudes
+  // ======================================================
+  // 🔹 Obtener mis solicitudes (TRABAJADOR)
+  // ======================================================
   async listarMisSolicitudes(req, res) {
     try {
       const { userId } = req.params;
@@ -58,7 +68,7 @@ module.exports = {
         include: [
           {
             model: Trabajo,
-            as: "trabajo",
+            as: "trabajoAsociado", // 🔥 MISMO alias del modelo
           },
         ],
         order: [["createdAt", "DESC"]],
@@ -66,57 +76,80 @@ module.exports = {
 
       return res.json(solicitudes);
     } catch (e) {
-      console.log(e);
+      console.error(e);
       res.status(500).json({ error: "Error al obtener solicitudes" });
     }
   },
 
-  // ACEPTAR solicitud (empleador)
+  // ======================================================
+  // 🔹 ACEPTAR solicitud (EMPLEADOR)
+  // ======================================================
   async aceptar(req, res) {
     try {
       const { id } = req.params;
 
       const solicitud = await SolicitudTrabajo.findByPk(id);
-      if (!solicitud) return res.status(404).json({ error: "No existe" });
+      if (!solicitud) {
+        return res.status(404).json({ error: "Solicitud no existe" });
+      }
 
       solicitud.estado = "aceptada";
       await solicitud.save();
 
-      // 🔔 Notificar al TRABAJADOR
-      await crearNotificacion(
-        solicitud.userId,
-        "Postulación aceptada",
-        "Tu postulación ha sido aceptada por el empleador."
-      );
+      // Obtener trabajo para mensaje correcto
+      const trabajo = await Trabajo.findByPk(solicitud.trabajoId);
 
-      return res.json({ mensaje: "Solicitud aceptada", solicitud });
+      // 🔔 NOTIFICAR AL TRABAJADOR
+      await crearNotificacion(solicitud.userId, {
+        titulo: "Postulación aceptada",
+        mensaje: trabajo
+          ? `Tu postulación al trabajo "${trabajo.titulo}" fue aceptada.`
+          : "Tu postulación fue aceptada.",
+        trabajoId: solicitud.trabajoId, // 🔥 CLAVE
+      });
+
+      return res.json({
+        mensaje: "Solicitud aceptada",
+        solicitud,
+      });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       res.status(500).json({ error: "Error al aceptar solicitud" });
     }
   },
 
-  // RECHAZAR solicitud (empleador)
+  // ======================================================
+  // 🔹 RECHAZAR solicitud (EMPLEADOR)
+  // ======================================================
   async rechazar(req, res) {
     try {
       const { id } = req.params;
 
       const solicitud = await SolicitudTrabajo.findByPk(id);
-      if (!solicitud) return res.status(404).json({ error: "No existe" });
+      if (!solicitud) {
+        return res.status(404).json({ error: "Solicitud no existe" });
+      }
 
       solicitud.estado = "rechazada";
       await solicitud.save();
 
-      // 🔔 Notificar al TRABAJADOR
-      await crearNotificacion(
-        solicitud.userId,
-        "Postulación rechazada",
-        "Tu postulación ha sido rechazada por el empleador."
-      );
+      const trabajo = await Trabajo.findByPk(solicitud.trabajoId);
 
-      return res.json({ mensaje: "Solicitud rechazada", solicitud });
+      // 🔔 NOTIFICAR AL TRABAJADOR
+      await crearNotificacion(solicitud.userId, {
+        titulo: "Postulación rechazada",
+        mensaje: trabajo
+          ? `Tu postulación al trabajo "${trabajo.titulo}" fue rechazada.`
+          : "Tu postulación fue rechazada.",
+        trabajoId: solicitud.trabajoId, // 🔥 CLAVE
+      });
+
+      return res.json({
+        mensaje: "Solicitud rechazada",
+        solicitud,
+      });
     } catch (e) {
-      console.log(e);
+      console.error(e);
       res.status(500).json({ error: "Error al rechazar solicitud" });
     }
   },

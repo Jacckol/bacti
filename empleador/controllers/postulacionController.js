@@ -29,7 +29,42 @@ module.exports = {
         });
       }
 
-      // Crear postulación
+      // =============================
+      // VALIDAR QUE EL TRABAJO EXISTA
+      // =============================
+      const trabajo = await Trabajo.findByPk(trabajoId);
+
+      if (!trabajo) {
+        return res.status(404).json({
+          error: "El trabajo no existe",
+        });
+      }
+
+      // =============================
+      // VALIDAR QUE EL EMPLEADOR EXISTA
+      // =============================
+      if (!trabajo.empleadorId) {
+        return res.status(400).json({
+          error: "Este trabajo no tiene un empleador asignado",
+        });
+      }
+
+      const empleador = await Empleador.findByPk(trabajo.empleadorId);
+
+      if (!empleador) {
+        return res.status(404).json({
+          error: "El empleador no existe",
+        });
+      }
+
+      // =============================
+      // OBTENER DATOS DEL POSTULANTE
+      // =============================
+      const postulanteUser = await User.findByPk(userId);
+
+      // =============================
+      // CREAR LA POSTULACIÓN
+      // =============================
       const nueva = await Postulacion.create({
         trabajoId,
         userId,
@@ -38,22 +73,26 @@ module.exports = {
       });
 
       // =============================
-      // 🔔 NOTIFICAR AL EMPLEADOR
+      // 🔔 NOTIFICAR AL EMPLEADOR (CON DATA JSON)
       // =============================
-      const trabajo = await Trabajo.findByPk(trabajoId);
-      const empleador = await Empleador.findByPk(trabajo.empleadorId);
+      await crearNotificacion(
+        empleador.userId,
+        "Nueva postulación recibida",
+        `Un trabajador se ha postulado al trabajo: "${trabajo.titulo}".`,
+        {
+          postulante: {
+            id: postulanteUser?.id,
+            nombre: postulanteUser?.nombre || "Trabajador",
+          },
+          trabajo: {
+            id: trabajo.id,
+            titulo: trabajo.titulo,
+          },
+        }
+      );
 
-      if (empleador) {
-        await crearNotificacion(
-          empleador.userId,
-          "Nueva postulación recibida",
-          `Un trabajador se ha postulado al trabajo: "${trabajo.titulo}".`
-        );
-      }
+      return res.status(201).json({ postulacion: nueva });
 
-      return res.status(201).json({
-        postulacion: nueva,
-      });
     } catch (err) {
       console.error("❌ Error al crear postulación:", err);
       return res.status(500).json({
@@ -82,6 +121,7 @@ module.exports = {
       });
 
       return res.json({ postulaciones: lista });
+
     } catch (err) {
       console.error("❌ Error al listar postulaciones:", err);
       return res.status(500).json({
@@ -115,16 +155,15 @@ module.exports = {
       post.estado = estado;
       await post.save();
 
-      // =============================
-      // 🔔 NOTIFICAR AL TRABAJADOR
-      // =============================
+      // 🔔 Notificar al trabajador
       await crearNotificacion(
-        post.userId, 
+        post.userId,
         "Actualización de tu postulación",
         `Tu postulación fue ${estado}.`
       );
 
       return res.json({ postulacion: post });
+
     } catch (err) {
       console.error("❌ Error al cambiar estado:", err);
       return res.status(500).json({

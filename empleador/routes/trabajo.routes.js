@@ -39,6 +39,12 @@ router.put("/:id", trabajoController.actualizar);
 router.patch("/:id/estado", trabajoController.cambiarEstado);
 
 // ===========================================================
+// 🔹 Finalizar trabajo (exitoso / malo)
+//     POST /api/trabajos/:id/finalizar
+// ===========================================================
+router.post("/:id/finalizar", trabajoController.finalizarTrabajo);
+
+// ===========================================================
 // 🔹 Eliminar trabajo
 //     DELETE /api/trabajos/:id
 // ===========================================================

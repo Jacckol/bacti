@@ -42,9 +42,9 @@ db.PerfilEmpleador  = require('../empleador/models/perfilEmpleador')(sequelize, 
 db.Postulacion      = require('../empleador/models/postulacion')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
-// 🔹 Importar MODELO DE NOTIFICACIONES (NUEVO)
+// 🔹 Importar MODELO DE NOTIFICACIONES (UNIFICADO)
 // ==========================================================
-db.Notificacion     = require('../empleador/models/notificacion')(sequelize, Sequelize.DataTypes);
+db.Notificacion = require('./Notificacion')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
 // 🔹 Importar MODELO Solicitud del Trabajador
@@ -52,7 +52,7 @@ db.Notificacion     = require('../empleador/models/notificacion')(sequelize, Seq
 db.SolicitudTrabajo = require('./SolicitudTrabajo')(sequelize, Sequelize.DataTypes);
 
 // ==========================================================
-// 🔹 IMPORTAR MODELO DE TRANSACCIONES (billetera)
+// 🔹 Importar modelo de billetera
 // ==========================================================
 db.Transaction = require('./transaction')(sequelize, Sequelize.DataTypes);
 
@@ -61,143 +61,48 @@ db.Transaction = require('./transaction')(sequelize, Sequelize.DataTypes);
 // ==========================================================
 
 // Usuario → Servicios (1:N)
-db.User.hasMany(db.Servicio, {
-  foreignKey: 'userId',
-  as: 'servicios',
-  onDelete: 'CASCADE',
-});
-db.Servicio.belongsTo(db.User, {
-  foreignKey: 'userId',
-  as: 'autorServicio',
-});
+db.User.hasMany(db.Servicio, { foreignKey: 'userId', as: 'servicios' });
+db.Servicio.belongsTo(db.User, { foreignKey: 'userId', as: 'autorServicio' });
 
 // Usuario → Trabajador (1:1)
-db.User.hasOne(db.Trabajador, {
-  foreignKey: 'userId',
-  as: 'trabajador',
-  onDelete: 'CASCADE',
-});
-db.Trabajador.belongsTo(db.User, {
-  foreignKey: 'userId',
-  as: 'dueño',
-});
+db.User.hasOne(db.Trabajador, { foreignKey: 'userId', as: 'trabajador' });
+db.Trabajador.belongsTo(db.User, { foreignKey: 'userId', as: 'dueño' });
 
-// Usuario → Perfil Laboral (1:1)
-db.User.hasOne(db.PerfilLaboral, {
-  foreignKey: 'userId',
-  as: 'perfilLaboral',
-  onDelete: 'CASCADE',
-});
-db.PerfilLaboral.belongsTo(db.User, {
-  foreignKey: 'userId',
-  as: 'usuarioPerfilLaboral',
-});
+// Usuario → Perfil Laboral
+db.User.hasOne(db.PerfilLaboral, { foreignKey: 'userId', as: 'perfilLaboral' });
+db.PerfilLaboral.belongsTo(db.User, { foreignKey: 'userId', as: 'usuarioPerfilLaboral' });
 
-// Usuario → Perfil Profesional (1:1)
-db.User.hasOne(db.Perfil, {
-  foreignKey: 'userId',
-  as: 'perfil',
-  onDelete: 'CASCADE',
-});
-db.Perfil.belongsTo(db.User, {
-  foreignKey: 'userId',
-  as: 'usuarioPerfil',
-});
+// Usuario → Perfil Profesional
+db.User.hasOne(db.Perfil, { foreignKey: 'userId', as: 'perfil' });
+db.Perfil.belongsTo(db.User, { foreignKey: 'userId', as: 'usuarioPerfil' });
 
 // ==========================================================
 // 🔹 ASOCIACIONES (EMPLEADOR)
 // ==========================================================
+db.User.hasOne(db.Empleador, { foreignKey: 'userId', as: 'empleador' });
+db.Empleador.belongsTo(db.User, { foreignKey: 'userId', as: 'usuarioEmpleador' });
 
-// Usuario → Empleador (1:1)
-db.User.hasOne(db.Empleador, {
-  foreignKey: 'userId',
-  as: 'empleador',
-  onDelete: 'CASCADE',
-});
-db.Empleador.belongsTo(db.User, {
-  foreignKey: 'userId',
-  as: 'usuarioEmpleador',
-});
+db.Empleador.hasMany(db.Trabajo, { foreignKey: 'empleadorId', as: 'trabajos' });
+db.Trabajo.belongsTo(db.Empleador, { foreignKey: 'empleadorId', as: 'empleador' });
 
-// Empleador → Trabajo (1:N)
-db.Empleador.hasMany(db.Trabajo, {
-  foreignKey: 'empleadorId',
-  as: 'trabajos',
-  onDelete: 'CASCADE',
-});
-
-// Trabajo → Empleador
-db.Trabajo.belongsTo(db.Empleador, {
-  foreignKey: 'empleadorId',
-  as: 'empleador',
-});
-
-// Empleador → Perfil Empleador (1:1)
-db.Empleador.hasOne(db.PerfilEmpleador, {
-  foreignKey: 'empleadorId',
-  as: 'perfilEmpleador',
-  onDelete: 'CASCADE',
-});
-db.PerfilEmpleador.belongsTo(db.Empleador, {
-  foreignKey: 'empleadorId',
-  as: 'usuarioDelPerfil',
-});
+db.Empleador.hasOne(db.PerfilEmpleador, { foreignKey: 'empleadorId', as: 'perfilEmpleador' });
+db.PerfilEmpleador.belongsTo(db.Empleador, { foreignKey: 'empleadorId', as: 'usuarioDelPerfil' });
 
 // ==========================================================
-// 🔹 ASOCIACIONES (NOTIFICACIONES) — NUEVAS
+// 🔹 ASOCIACIONES (SOLICITUDES TRABAJADOR)
 // ==========================================================
-
-// Un usuario tiene muchas notificaciones
-db.User.hasMany(db.Notificacion, {
-  foreignKey: "userId",
-  as: "notificaciones",
-  onDelete: "CASCADE",
-});
-
-// Cada notificación pertenece a un usuario
-db.Notificacion.belongsTo(db.User, {
-  foreignKey: "userId",
-  as: "usuarioNotificacion",
-});
-
-// ==========================================================
-// 🔹 ASOCIACIONES (SOLICITUDES DEL TRABAJADOR)
-// ==========================================================
-
-// Usuario → Solicitudes (1:N)
-db.User.hasMany(db.SolicitudTrabajo, {
-  foreignKey: "userId",
-  as: "solicitudes",
-  onDelete: "CASCADE",
-});
-
-// Trabajo → Solicitudes (1:N)
-db.Trabajo.hasMany(db.SolicitudTrabajo, {
-  foreignKey: "trabajoId",
-  as: "solicitudesDeTrabajo",
-  onDelete: "CASCADE",
-});
-db.SolicitudTrabajo.belongsTo(db.Trabajo, {
-  foreignKey: "trabajoId",
-  as: "trabajoDelSolicitante",
-});
+db.User.hasMany(db.SolicitudTrabajo, { foreignKey: 'userId', as: 'solicitudes' });
+db.Trabajo.hasMany(db.SolicitudTrabajo, { foreignKey: 'trabajoId', as: 'solicitudesDeTrabajo' });
+db.SolicitudTrabajo.belongsTo(db.Trabajo, { foreignKey: 'trabajoId', as: 'trabajoDelSolicitante' });
 
 // ==========================================================
 // 🔹 ASOCIACIONES (BILLETERA)
 // ==========================================================
-
-db.User.hasMany(db.Transaction, {
-  foreignKey: "userId",
-  as: "transacciones",
-  onDelete: "CASCADE",
-});
-db.Transaction.belongsTo(db.User, {
-  foreignKey: "userId",
-  as: "usuarioTransaccion",
-});
+db.User.hasMany(db.Transaction, { foreignKey: 'userId', as: 'transacciones' });
+db.Transaction.belongsTo(db.User, { foreignKey: 'userId', as: 'usuarioTransaccion' });
 
 // ==========================================================
-// 🔹 Ejecutar associate() si existe
+// 🔹 Ejecutar associate() de cada modelo
 // ==========================================================
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {

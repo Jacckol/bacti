@@ -4,12 +4,12 @@ const express = require('express');
 const router = express.Router();
 
 // ==========================================================
-// 🔹 Legacy system
+// 🔹 Legacy system (aún utilizado)
 // ==========================================================
 const action = require('../methods/actions');
 
 // ==========================================================
-// 🔹 Rutas modernas (SERVX)
+// 🔹 RUTAS SERVX (MODERNAS)
 // ==========================================================
 const userRoutes = require('./user.routes');
 const trabajadorRoutes = require('./trabajador.routes');
@@ -18,18 +18,23 @@ const perfilRoutes = require('./perfil.routes');
 const servicioRoutes = require('./servicio.routes');
 
 // ==========================================================
-// 🔹 RUTA DE BILLETERA (NUEVO - FUNCIONA 100%)
+// 🔹 RUTA DE BILLETERA
 // ==========================================================
-const transactionRoutes = require('./transaction.routes'); 
+const transactionRoutes = require('./transaction.routes');
 
 // ==========================================================
-// 🔹 Rutas del módulo Empleador
+// 🔹 RUTAS MÓDULO EMPLEADOR
 // ==========================================================
 const empleadorRoutes = require('../empleador/routes/empleador.routes');
 const perfilEmpleadorRoutes = require('../empleador/routes/perfilEmpleadorRoutes');
 const trabajoRoutes = require('../empleador/routes/trabajo.routes');
 const postulacionRoutes = require('../empleador/routes/postulacion.routes');
-const notificacionRoutes = require('../empleador/routes/notificacion.routes');
+
+// ==========================================================
+// 🔹 RUTAS DE NOTIFICACIONES (UNIFICADAS)
+// ==========================================================
+// ⚠️ YA NO USAMOS rutas de empleador/notificaciones
+const notificacionRoutes = require('../routes/notificacion.routes');
 
 // ==========================================================
 // 🔹 RUTAS SERVX
@@ -47,15 +52,19 @@ router.use('/api/empleadores', empleadorRoutes);
 router.use('/api/perfil-empleador', perfilEmpleadorRoutes);
 router.use('/api/trabajos', trabajoRoutes);
 router.use('/api/postulaciones', postulacionRoutes);
+
+// ==========================================================
+// 🔹 RUTAS DE NOTIFICACIONES (UNIFICADAS)
+// ==========================================================
 router.use('/api/notificaciones', notificacionRoutes);
 
 // ==========================================================
-// 🔹 RUTA DE BILLETERA (NO ROMPE NADA)
+// 🔹 RUTA DE BILLETERA
 // ==========================================================
 router.use('/api/transactions', transactionRoutes);
 
 // ==========================================================
-// 🔹 LEGACY ROUTES
+// 🔹 LEGACY ROUTES (AÚN NECESARIAS PARA APP VIEJA)
 // ==========================================================
 router.post('/api/register', action.addNew);
 router.post('/api/login', action.authenticate);
