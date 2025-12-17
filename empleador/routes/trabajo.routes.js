@@ -39,10 +39,19 @@ router.put("/:id", trabajoController.actualizar);
 router.patch("/:id/estado", trabajoController.cambiarEstado);
 
 // ===========================================================
-// 🔹 Finalizar trabajo (exitoso / malo)
+// 🔹 Finalizar trabajo AVANZADO (exitoso / malo)
 //     POST /api/trabajos/:id/finalizar
 // ===========================================================
 router.post("/:id/finalizar", trabajoController.finalizarTrabajo);
+
+// ===========================================================
+// ✅ Finalizar trabajo SIMPLE (SIN resultado, SIN pagos)
+//     PUT /api/trabajos/:id/finalizar-simple
+// ===========================================================
+router.put(
+  "/:id/finalizar-simple",
+  trabajoController.finalizarTrabajoSimple
+);
 
 // ===========================================================
 // 🔹 Eliminar trabajo

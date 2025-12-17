@@ -1,4 +1,5 @@
 'use strict';
+
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -9,7 +10,7 @@ require('dotenv').config();
 // ==========================================================
 // 🔹 Router principal (ÚNICO)
 // ==========================================================
-const routes = require('./routes/index'); // todas las rutas están ahí
+const routes = require('./routes/index'); // TODAS las rutas están ahí
 
 // ==========================================================
 // 🔹 Sequelize
@@ -36,10 +37,9 @@ app.use(passport.initialize());
 require('./config/passport')(passport);
 
 // ==========================================================
-// 🔹 Rutas (solo UNA VEZ)
+// 🔹 RUTAS (SOLO UNA VEZ, SIN DUPLICAR)
 // ==========================================================
 app.use(routes);
-
 
 // ==========================================================
 // 🔹 Sincronizar modelos con la base de datos
@@ -62,7 +62,3 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
-const notificacionRoutes = require("./routes/notificacion.routes");
-
-// ...
-app.use("/api/notificaciones", notificacionRoutes);

@@ -11,6 +11,15 @@ const {
 const { Op } = require("sequelize");
 const { crearNotificacion } = require("../../methods/notificar");
 
+// ======================================================
+// 🔐 ENUMS CENTRALIZADOS (ANTI-ERRORES)
+// ======================================================
+const ESTADOS_TRABAJO = {
+  ACTIVO: "activo",
+  PAUSADO: "pausado",
+  FINALIZADO: "finalizado",
+};
+
 module.exports = {
   // ======================================================
   // 🔹 Crear trabajo (OFERTA)
@@ -46,7 +55,7 @@ module.exports = {
         salario: salario ? salario.toString() : "",
         ubicacion: ubicacion || "",
         categoria: categoria || "",
-        estado: "activo",
+        estado: ESTADOS_TRABAJO.ACTIVO,
         empleadorId: empleador.id,
       });
 
@@ -214,6 +223,10 @@ module.exports = {
         return res.status(400).json({ error: "estado es requerido" });
       }
 
+      if (!Object.values(ESTADOS_TRABAJO).includes(estado)) {
+        return res.status(400).json({ error: "Estado inválido" });
+      }
+
       const trabajo = await Trabajo.findByPk(id);
       if (!trabajo) {
         return res.status(404).json({ error: "Trabajo no encontrado" });
@@ -233,12 +246,12 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔥 FINALIZAR TRABAJO (TIPO inDrive)
+  // 🔥 FINALIZAR TRABAJO AVANZADO
   // ======================================================
   async finalizarTrabajo(req, res) {
     try {
-      const { id } = req.params; // trabajoId
-      const { resultado } = req.body; // exitoso | malo
+      const { id } = req.params;
+      const { resultado } = req.body;
 
       if (!["exitoso", "malo"].includes(resultado)) {
         return res.status(400).json({ error: "Resultado inválido" });
@@ -249,31 +262,9 @@ module.exports = {
         return res.status(404).json({ error: "Trabajo no encontrado" });
       }
 
-      trabajo.estado = "finalizado";
+      trabajo.estado = ESTADOS_TRABAJO.FINALIZADO;
       trabajo.resultado = resultado;
       await trabajo.save();
-
-      const solicitud = await SolicitudTrabajo.findOne({
-        where: {
-          trabajoId: id,
-          estado: "aceptada",
-        },
-      });
-
-      if (solicitud) {
-        await crearNotificacion(solicitud.userId, {
-          titulo:
-            resultado === "exitoso"
-              ? "Trabajo finalizado con éxito"
-              : "Trabajo con inconvenientes",
-          mensaje:
-            resultado === "exitoso"
-              ? `El trabajo "${trabajo.titulo}" fue finalizado correctamente.`
-              : `El empleador reportó problemas en el trabajo "${trabajo.titulo}".`,
-          trabajoId: trabajo.id,
-          empleadorId: trabajo.empleadorId,
-        });
-      }
 
       return res.json({
         message: "Trabajo finalizado correctamente",
@@ -281,6 +272,37 @@ module.exports = {
       });
     } catch (error) {
       console.error("❌ Error al finalizar trabajo:", error);
+      res.status(500).json({ error: "Error al finalizar trabajo" });
+    }
+  },
+
+  // ======================================================
+  // ✅ FINALIZAR TRABAJO SIMPLE (CORREGIDO)
+  // ======================================================
+  async finalizarTrabajoSimple(req, res) {
+    try {
+      const { id } = req.params;
+
+      const trabajo = await Trabajo.findByPk(id);
+      if (!trabajo) {
+        return res.status(404).json({ error: "Trabajo no encontrado" });
+      }
+
+      if (trabajo.estado === ESTADOS_TRABAJO.FINALIZADO) {
+        return res.status(400).json({
+          error: "El trabajo ya está finalizado",
+        });
+      }
+
+      trabajo.estado = ESTADOS_TRABAJO.FINALIZADO;
+      await trabajo.save();
+
+      return res.json({
+        message: "✅ Trabajo finalizado correctamente",
+        trabajo,
+      });
+    } catch (error) {
+      console.error("❌ Error al finalizar trabajo simple:", error);
       res.status(500).json({ error: "Error al finalizar trabajo" });
     }
   },

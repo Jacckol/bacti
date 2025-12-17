@@ -57,17 +57,17 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
 
-      // Estado general del trabajo
+      // 🟡 Estado general del trabajo
       estado: {
         type: DataTypes.ENUM("activo", "pausado", "finalizado"),
-        defaultValue: "activo",
         allowNull: false,
+        defaultValue: "activo",
       },
 
-      // ✅ Estado final (SOLO cuando se finaliza)
+      // ✅ Resultado final (SOLO cuando está finalizado)
       estadoFinal: {
         type: DataTypes.ENUM("exitoso", "malo"),
-        allowNull: true, // ← AQUÍ se maneja el NULL
+        allowNull: true,
       },
     },
     {
@@ -77,7 +77,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Trabajo.associate = (models) => {
-    // Aquí puedes agregar relaciones después si quieres
+    // Relaciones futuras
   };
 
   return Trabajo;
