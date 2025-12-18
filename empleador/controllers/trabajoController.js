@@ -7,6 +7,7 @@ const {
   Trabajador,
   Notificacion,
   SolicitudTrabajo,
+  Postulacion, // 🔥 NECESARIO PARA BORRAR DEPENDENCIAS
 } = require("../../models");
 const { Op } = require("sequelize");
 const { crearNotificacion } = require("../../methods/notificar");
@@ -277,7 +278,7 @@ module.exports = {
   },
 
   // ======================================================
-  // ✅ FINALIZAR TRABAJO SIMPLE (CORREGIDO)
+  // ✅ FINALIZAR TRABAJO SIMPLE
   // ======================================================
   async finalizarTrabajoSimple(req, res) {
     try {
@@ -308,7 +309,7 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔹 Eliminar trabajo
+  // 🔥 ELIMINAR TRABAJO (CORREGIDO DEFINITIVAMENTE)
   // ======================================================
   async eliminar(req, res) {
     try {
@@ -319,11 +320,28 @@ module.exports = {
         return res.status(404).json({ error: "Trabajo no encontrado" });
       }
 
+      // 🧹 1️⃣ Eliminar postulaciones
+      await Postulacion.destroy({
+        where: { trabajoId: id },
+      });
+
+      // 🧹 2️⃣ Eliminar solicitudes
+      await SolicitudTrabajo.destroy({
+        where: { trabajoId: id },
+      });
+
+      // 🗑 3️⃣ Eliminar trabajo
       await trabajo.destroy();
-      res.json({ message: "Trabajo eliminado correctamente" });
+
+      return res.json({
+        ok: true,
+        message: "Trabajo eliminado correctamente",
+      });
     } catch (error) {
       console.error("❌ Error al eliminar trabajo:", error);
-      res.status(500).json({ error: "Error al eliminar trabajo" });
+      return res.status(500).json({
+        error: "Error al eliminar trabajo",
+      });
     }
   },
 };

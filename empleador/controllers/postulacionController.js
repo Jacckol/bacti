@@ -73,7 +73,7 @@ module.exports = {
       });
 
       // =============================
-      // 🔔 NOTIFICAR AL EMPLEADOR (CON DATA JSON)
+      // 🔔 NOTIFICAR AL EMPLEADOR
       // =============================
       await crearNotificacion(
         empleador.userId,
@@ -81,8 +81,8 @@ module.exports = {
         `Un trabajador se ha postulado al trabajo: "${trabajo.titulo}".`,
         {
           postulante: {
-            id: postulanteUser?.id,
-            nombre: postulanteUser?.nombre || "Trabajador",
+            userId: postulanteUser.id,
+            nombre: postulanteUser.nombre || "Trabajador",
           },
           trabajo: {
             id: trabajo.id,
@@ -102,7 +102,7 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔹 Listar postulaciones de un trabajo
+  // 🔹 Listar postulaciones de un trabajo (FIX DEFINITIVO)
   // ======================================================
   async porTrabajo(req, res) {
     try {
@@ -120,7 +120,20 @@ module.exports = {
         order: [["createdAt", "DESC"]],
       });
 
-      return res.json({ postulaciones: lista });
+      // 🔥 FIX REAL: ENVIAR userId EXPLÍCITO
+      const postulaciones = lista.map((p) => ({
+        id: p.id,
+        estado: p.estado,
+        mensaje: p.mensaje,
+        createdAt: p.createdAt,
+        postulante: {
+          userId: p.postulante.id, // 🔥 ESTE ERA EL PROBLEMA
+          nombre: p.postulante.nombre,
+          email: p.postulante.email,
+        },
+      }));
+
+      return res.json({ postulaciones });
 
     } catch (err) {
       console.error("❌ Error al listar postulaciones:", err);
