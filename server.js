@@ -39,7 +39,8 @@ require('./config/passport')(passport);
 // ==========================================================
 // 🔹 RUTAS (SOLO UNA VEZ, SIN DUPLICAR)
 // ==========================================================
-app.use(routes);
+ app.use('/api', routes);
+
 
 // ==========================================================
 // 🔹 Sincronizar modelos con la base de datos

@@ -16,10 +16,6 @@ const trabajadorRoutes = require('./trabajador.routes');
 const perfilLaboralRoutes = require('./perfilLaboral.routes');
 const perfilRoutes = require('./perfil.routes');
 const servicioRoutes = require('./servicio.routes');
-
-// ==========================================================
-// 🔹 RUTA DE BILLETERA
-// ==========================================================
 const transactionRoutes = require('./transaction.routes');
 
 // ==========================================================
@@ -31,52 +27,48 @@ const trabajoRoutes = require('../empleador/routes/trabajo.routes');
 const postulacionRoutes = require('../empleador/routes/postulacion.routes');
 
 // ==========================================================
-// 🔹 RUTAS DE NOTIFICACIONES (UNIFICADAS)
+// 🔹 RUTAS DE NOTIFICACIONES
 // ==========================================================
-// ⚠️ YA NO USAMOS rutas de empleador/notificaciones
-const notificacionRoutes = require('../routes/notificacion.routes');
+const notificacionRoutes = require('./notificacion.routes');
 
 // ==========================================================
-// 🔹 RUTAS SERVX
+// 🔹 RUTAS PRINCIPALES (SIN /api AQUÍ)
 // ==========================================================
-router.use('/api', userRoutes);
-router.use('/api/trabajadores', trabajadorRoutes);
-router.use('/api/perfil-laboral', perfilLaboralRoutes);
-router.use('/api/perfil', perfilRoutes);
-router.use('/api/servicios', servicioRoutes);
+router.use('/users', userRoutes);
+router.use('/trabajador', trabajadorRoutes);
+router.use('/perfil-laboral', perfilLaboralRoutes);
+router.use('/perfil', perfilRoutes);
+router.use('/servicios', servicioRoutes);
+router.use('/transactions', transactionRoutes);
 
 // ==========================================================
 // 🔹 RUTAS EMPLEADOR
 // ==========================================================
-router.use('/api/empleadores', empleadorRoutes);
-router.use('/api/perfil-empleador', perfilEmpleadorRoutes);
-router.use('/api/trabajos', trabajoRoutes);
-router.use('/api/postulaciones', postulacionRoutes);
+router.use('/empleadores', empleadorRoutes);
+router.use('/perfil-empleador', perfilEmpleadorRoutes);
+router.use('/trabajos', trabajoRoutes);
+router.use('/postulaciones', postulacionRoutes);
 
 // ==========================================================
-// 🔹 RUTAS DE NOTIFICACIONES (UNIFICADAS)
+// 🔹 NOTIFICACIONES
 // ==========================================================
-router.use('/api/notificaciones', notificacionRoutes);
+router.use('/notificaciones', notificacionRoutes);
 
 // ==========================================================
-// 🔹 RUTA DE BILLETERA
+// 🔹 LEGACY ROUTES (NO TOCAR)
+// ✅ WRAPPERS para que NUNCA explote al arrancar por undefined
 // ==========================================================
-router.use('/api/transactions', transactionRoutes);
+router.post('/register', (req, res) => action.addNew(req, res));
+router.post('/login', (req, res) => action.authenticate(req, res));
+router.get('/getinfo', (req, res) => action.getinfo(req, res));
 
-// ==========================================================
-// 🔹 LEGACY ROUTES (AÚN NECESARIAS PARA APP VIEJA)
-// ==========================================================
-router.post('/api/register', action.addNew);
-router.post('/api/login', action.authenticate);
-router.get('/api/getinfo', action.getinfo);
-
-router.post('/api/addpost', action.addPost);
-router.get('/api/getallpost', action.getAllPost);
-router.get('/api/getpostbyid/:id', action.getPostbyId);
-router.get('/api/getpostbyauthorid/:id', action.getPostbyAuthorId);
-router.get('/api/searchpost/:title', action.searchPost);
-router.put('/api/updatepost/:id', action.updatePost);
-router.delete('/api/deletepost/:id', action.deletePost);
+router.post('/addpost', (req, res) => action.addPost(req, res));
+router.get('/getallpost', (req, res) => action.getAllPost(req, res));
+router.get('/getpostbyid/:id', (req, res) => action.getPostbyId(req, res));
+router.get('/getpostbyauthorid/:id', (req, res) => action.getPostbyAuthorId(req, res));
+router.get('/searchpost/:title', (req, res) => action.searchPost(req, res));
+router.put('/updatepost/:id', (req, res) => action.updatePost(req, res));
+router.delete('/deletepost/:id', (req, res) => action.deletePost(req, res));
 
 // ==========================================================
 // 🔹 TEST

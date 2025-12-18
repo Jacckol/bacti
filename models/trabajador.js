@@ -1,10 +1,14 @@
 'use strict';
+
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class Trabajador extends Model {
     static associate(models) {
-      // La asociación está en models/index.js
+      Trabajador.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user',
+      });
     }
   }
 
@@ -12,55 +16,41 @@ module.exports = (sequelize, DataTypes) => {
     {
       nombre: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
       telefono: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
       direccion: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
       categoria: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
-
-      // 🔥🔥🔥 ARREGLADO → YA NO ES INTEGER
       experiencia: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
-
       descripcion: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: true,
       },
       horario: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
       },
-      fotoPerfil: {
-        type: DataTypes.STRING,
-        allowNull: true
-      },
-
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onDelete: 'CASCADE'
-      }
+      },
     },
     {
       sequelize,
       modelName: 'Trabajador',
       tableName: 'trabajadores',
-      timestamps: true
     }
   );
 

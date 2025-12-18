@@ -128,3 +128,33 @@ module.exports = {
   }
 
 };
+////
+const { trabajador, user, perfilLaboral } = require("../models");
+
+module.exports.buscarPerfiles = async (req, res) => {
+  try {
+    const { categoria, experiencia } = req.query;
+
+    const where = {};
+    if (categoria) where.categoria = categoria;
+    if (experiencia) where.experiencia = experiencia;
+
+    const trabajadores = await trabajador.findAll({
+      where,
+      include: [
+        {
+          model: user,
+          attributes: ["id", "nombre", "email"]
+        },
+        {
+          model: perfilLaboral
+        }
+      ]
+    });
+
+    res.json(trabajadores);
+  } catch (error) {
+    console.error("❌ Error buscar perfiles:", error);
+    res.status(500).json({ mensaje: "Error al buscar perfiles" });
+  }
+};

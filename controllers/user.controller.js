@@ -1,6 +1,6 @@
 'use strict';
 
-const { User, Trabajador, PerfilLaboral, Empleador } = require('../models');
+const { User, Trabajador, Empleador, PerfilLaboral } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -9,28 +9,39 @@ const JWT_SECRET = 'TU_SECRETO_JWT_AQUI';
 module.exports = {
 
   // =====================================================
-  // REGISTRO UNIFICADO
-  // (Crea usuario + trabajador o empleador según rol)
+  // REGISTRO (COMPATIBLE CON FRONT ANTIGUO)
   // =====================================================
   async registrar(req, res) {
     try {
-      const {
-        nombre, email, password, rol,
-        telefono, direccion, categoria, experiencia, descripcion,
-        empresa, ruc
+      let {
+        nombre,
+        email,
+        password,
+        rol,
+        telefono,
+        direccion,
+        categoria,
+        experiencia,
+        descripcion,
+        empresa,
+        ruc
       } = req.body;
 
-      if (!nombre || !email || !password || !rol) {
-        return res.status(400).json({ error: 'Faltan campos obligatorios.' });
+      // 👉 compatibilidad total con el front antiguo
+      if (!rol) rol = 'trabajador';
+
+      if (!nombre || !email || !password) {
+        return res.status(400).json({ error: 'Datos incompletos' });
       }
 
-      // Validar email existente
       const existe = await User.findOne({ where: { email } });
-      if (existe) return res.status(400).json({ error: 'El correo ya está registrado.' });
+      if (existe) {
+        return res.status(400).json({ error: 'Correo ya registrado' });
+      }
 
-      // Crear usuario
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // ===== USER =====
       const user = await User.create({
         nombre,
         email,
@@ -38,55 +49,54 @@ module.exports = {
         rol,
       });
 
-      let trabajadorData = null;
-      let empleadorData = null;
+      let trabajador = null;
+      let empleador = null;
 
-      // ------------------------------
-      //    CREAR TRABAJADOR
-      // ------------------------------
+      // ===== TRABAJADOR =====
       if (rol === 'trabajador') {
-        trabajadorData = await Trabajador.create({
-          telefono: telefono || "",
-          direccion: direccion || "",
-          categoria: categoria || "",
-          experiencia: experiencia || "",
-          descripcion: descripcion || "",
+        trabajador = await Trabajador.create({
+          nombre: nombre,
+          telefono: telefono || '',
+          direccion: direccion || '',
+          categoria: categoria || '',
+          experiencia: experiencia || '',
+          descripcion: descripcion || '',
+          horario: '',
           userId: user.id,
         });
       }
 
-      // ------------------------------
-      //    CREAR EMPLEADOR
-      // ------------------------------
+      // ===== EMPLEADOR =====
       if (rol === 'empleador') {
-        empleadorData = await Empleador.create({
-          empresa: empresa || "",
-          ruc: ruc || "",
-          telefono: telefono || "",
+        empleador = await Empleador.create({
+          nombre: nombre,
+          empresa: empresa || '',
+          ruc: ruc || '',
+          telefono: telefono || '',
           userId: user.id,
         });
       }
 
-      return res.status(201).json({
-        mensaje: 'Usuario creado correctamente',
+      return res.status(200).json({
+        mensaje: 'Usuario registrado correctamente',
         user: {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
-          rol: user.rol
+          rol: user.rol,
         },
-        trabajador: trabajadorData,
-        empleador: empleadorData,
+        trabajador,
+        empleador,
       });
 
     } catch (error) {
-      console.error('ERROR REGISTRAR:', error);
-      res.status(500).json({ error: 'Error interno al registrar usuario.' });
+      console.error('ERROR REGISTER:', error);
+      return res.status(500).json({ error: 'Error interno del servidor' });
     }
   },
 
   // =====================================================
-  // LOGIN UNIFICADO (JWT + trabajador + empleador)
+  // LOGIN (ESTABLE)
   // =====================================================
   async login(req, res) {
     try {
@@ -96,31 +106,33 @@ module.exports = {
         where: { email },
         include: [
           { model: Trabajador, as: 'trabajador' },
-          { model: Empleador, as: 'empleador' }
+          { model: Empleador, as: 'empleador' },
         ],
       });
 
-      if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
 
       const valid = await bcrypt.compare(password, user.password);
-      if (!valid) return res.status(400).json({ error: 'Contraseña incorrecta.' });
+      if (!valid) {
+        return res.status(400).json({ error: 'Contraseña incorrecta' });
+      }
 
-      // Generar token
       const token = jwt.sign(
         { id: user.id, rol: user.rol },
         JWT_SECRET,
         { expiresIn: '1d' }
       );
 
-      // Verificar perfil laboral (solo trabajadores antiguos)
-      const perfil = await PerfilLaboral.findOne({ where: { userId: user.id }});
-      const perfilCompleto = perfil ? true : false;
+      const perfil = await PerfilLaboral.findOne({
+        where: { userId: user.id },
+      });
 
       return res.json({
-        message: 'Login exitoso',
         token,
         rol: user.rol,
-        perfilCompleto,
+        perfilCompleto: !!perfil,
         user: {
           id: user.id,
           nombre: user.nombre,
@@ -130,74 +142,9 @@ module.exports = {
         empleador: user.empleador || null,
       });
 
-    } catch (err) {
-      console.error('ERROR LOGIN:', err);
-      res.status(500).json({ error: 'Error en login.' });
-    }
-  },
-
-  // =====================================================
-  // LISTAR USUARIOS
-  // =====================================================
-  async listar(req, res) {
-    try {
-      const usuarios = await User.findAll({
-        include: [
-          { model: Trabajador, as: 'trabajador' },
-          { model: Empleador, as: 'empleador' }
-        ],
-      });
-
-      res.json(usuarios);
-
     } catch (error) {
-      console.error('ERROR LISTAR:', error);
-      res.status(500).json({ error: error.message });
-    }
-  },
-
-  // =====================================================
-  // ACTUALIZAR USUARIO
-  // =====================================================
-  async actualizar(req, res) {
-    try {
-      const { id } = req.params;
-      const { nombre, email, password, rol } = req.body;
-
-      const user = await User.findByPk(id);
-      if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
-
-      if (password) {
-        user.password = await bcrypt.hash(password, 10);
-      }
-
-      await user.update({ nombre, email, rol });
-
-      res.json({ mensaje: 'Usuario actualizado.', user });
-
-    } catch (error) {
-      console.error('ERROR ACTUALIZAR:', error);
-      res.status(500).json({ error: error.message });
-    }
-  },
-
-  // =====================================================
-  // ELIMINAR USUARIO
-  // =====================================================
-  async eliminar(req, res) {
-    try {
-      const { id } = req.params;
-
-      const user = await User.findByPk(id);
-      if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
-
-      await user.destroy();
-
-      res.json({ mensaje: 'Usuario eliminado.' });
-
-    } catch (error) {
-      console.error('ERROR ELIMINAR:', error);
-      res.status(500).json({ error: error.message });
+      console.error('ERROR LOGIN:', error);
+      return res.status(500).json({ error: 'Error en login' });
     }
   },
 
