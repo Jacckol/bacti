@@ -28,10 +28,20 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+
+      // ==================================================
+      // 🔥 CAMPO ESTADO (ALINEADO CON LA BD)
+      // ==================================================
+      estado: {
+        type: DataTypes.STRING, // ✅ CORRECTO
+        allowNull: false,
+        defaultValue: "activo",
+      },
     },
     {
-      tableName: "servicios",   // ⭐ IMPORTANTE: nombre exacto en minúsculas
-      freezeTableName: true     // ⭐ Evita que Sequelize pluralice
+      tableName: "servicios",   // ⭐ NO SE TOCA
+      freezeTableName: true,    // ⭐ NO SE TOCA
+      timestamps: true,         // createdAt / updatedAt
     }
   );
 

@@ -3,7 +3,6 @@
 const express = require("express");
 const router = express.Router();
 
-// 👇 IMPORTACIÓN CORRECTA (EL NOMBRE REAL DE TU ARCHIVO)
 const postulacionController = require("../controllers/postulacionController");
 
 // ======================================================
@@ -15,6 +14,11 @@ router.post("/", postulacionController.crear);
 // 🔹 Listar postulaciones de un trabajo
 // ======================================================
 router.get("/trabajo/:trabajoId", postulacionController.porTrabajo);
+
+// ======================================================
+// 🔥 NUEVO: Listar postulaciones de un usuario (TRABAJADOR)
+// ======================================================
+router.get("/usuario/:userId", postulacionController.porUsuario);
 
 // ======================================================
 // 🔹 Cambiar estado (pendiente / aceptado / rechazado)

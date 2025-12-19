@@ -7,7 +7,7 @@ const {
   Trabajador,
   Notificacion,
   SolicitudTrabajo,
-  Postulacion, // 🔥 NECESARIO PARA BORRAR DEPENDENCIAS
+  Postulacion,
 } = require("../../models");
 const { Op } = require("sequelize");
 const { crearNotificacion } = require("../../methods/notificar");
@@ -21,32 +21,74 @@ const ESTADOS_TRABAJO = {
   FINALIZADO: "finalizado",
 };
 
+// ======================================================
+// ✅ Helper: asegurar que exista Empleador para un userId
+// - Si el usuario tiene rol "empleador" y no existe en tabla Empleador,
+//   lo creamos automáticamente (para que no explote el POST /trabajos)
+// ======================================================
+async function asegurarEmpleador(userId) {
+  // 1) Buscar empleador existente
+  let empleador = await Empleador.findOne({ where: { userId } });
+  if (empleador) return empleador;
+
+  // 2) Verificar que el usuario exista y sea rol empleador
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return null; // luego respondemos 400 con mensaje claro
+  }
+
+  // En tu tabla users se ve rol = "empleador" / "trabajador"
+  if (user.rol !== "empleador") {
+    return "NO_ES_EMPLEADOR";
+  }
+
+  // 3) Crear empleador automático con defaults seguros
+  // (empresa/ruc/telefono vacíos para no romper)
+  empleador = await Empleador.create({
+    userId,
+    empresa: "",
+    ruc: "",
+    telefono: "",
+  });
+
+  return empleador;
+}
+
 module.exports = {
   // ======================================================
   // 🔹 Crear trabajo (OFERTA)
   // ======================================================
   async crear(req, res) {
     try {
-      const {
-        titulo,
-        descripcion,
-        salario,
-        ubicacion,
-        categoria,
-        userId,
-      } = req.body;
+      const { titulo, descripcion, salario, ubicacion, categoria, userId } =
+        req.body;
 
+      // Validaciones básicas
       if (!titulo || !descripcion || !userId) {
         return res.status(400).json({
           error: "titulo, descripcion y userId son obligatorios",
         });
       }
 
-      const empleador = await Empleador.findOne({ where: { userId } });
+      const userIdNum = Number(userId);
+      if (!Number.isInteger(userIdNum) || userIdNum <= 0) {
+        return res.status(400).json({
+          error: "userId inválido",
+        });
+      }
+
+      // ✅ Asegurar empleador (AUTO-CREACIÓN SI ROL=empleador)
+      const empleador = await asegurarEmpleador(userIdNum);
+
+      if (empleador === "NO_ES_EMPLEADOR") {
+        return res.status(400).json({
+          error: "Este usuario no es empleador (rol trabajador no puede crear trabajos)",
+        });
+      }
 
       if (!empleador) {
         return res.status(400).json({
-          error: "No existe un empleador asociado a ese usuario",
+          error: "Usuario no encontrado o no se pudo asociar como empleador",
         });
       }
 
@@ -138,8 +180,13 @@ module.exports = {
   async listarPorEmpleador(req, res) {
     try {
       const { userId } = req.params;
+      const userIdNum = Number(userId);
 
-      const empleador = await Empleador.findOne({ where: { userId } });
+      if (!Number.isInteger(userIdNum) || userIdNum <= 0) {
+        return res.status(400).json({ error: "userId inválido" });
+      }
+
+      const empleador = await Empleador.findOne({ where: { userId: userIdNum } });
       if (!empleador) return res.json({ trabajos: [] });
 
       const trabajos = await Trabajo.findAll({

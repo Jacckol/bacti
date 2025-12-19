@@ -1,4 +1,5 @@
 const { Servicio } = require("../models");
+const { Op } = require("sequelize");
 
 module.exports = {
   // ---------------------------------------------------
@@ -12,7 +13,8 @@ module.exports = {
         descripcion: req.body.descripcion,
         ubicacion: req.body.ubicacion,
         presupuesto: req.body.presupuesto,
-        userId: req.body.userId || null
+        userId: req.body.userId || null,
+        estado: "activo", // 🔥 IMPORTANTE
       });
 
       res.json({ ok: true, servicio: nuevo });
@@ -23,11 +25,21 @@ module.exports = {
   },
 
   // ---------------------------------------------------
-  // 🔹 LISTAR SERVICIOS
+  // 🔹 LISTAR SERVICIOS (ACTIVOS + < 24H)
   // ---------------------------------------------------
   async listar(req, res) {
     try {
+      const hace24h = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      );
+
       const servicios = await Servicio.findAll({
+        where: {
+          estado: "activo",
+          createdAt: {
+            [Op.gte]: hace24h,
+          },
+        },
         order: [["id", "DESC"]],
       });
 
@@ -39,15 +51,20 @@ module.exports = {
   },
 
   // ---------------------------------------------------
-  // 🔹 EDITAR SERVICIO
+  // 🔹 EDITAR SERVICIO (SOLO SI ESTÁ ACTIVO)
   // ---------------------------------------------------
   async editar(req, res) {
     try {
       const { id } = req.params;
 
-      const servicio = await Servicio.findByPk(id);
+      const servicio = await Servicio.findOne({
+        where: { id, estado: "activo" },
+      });
+
       if (!servicio) {
-        return res.status(404).json({ error: "Servicio no encontrado" });
+        return res.status(404).json({
+          error: "Servicio no encontrado o expirado",
+        });
       }
 
       await servicio.update({

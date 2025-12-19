@@ -18,7 +18,7 @@ module.exports = {
         });
       }
 
-      // Evitar duplicadas
+      // Evitar postulaciones duplicadas
       const existe = await Postulacion.findOne({
         where: { trabajoId, userId },
       });
@@ -29,42 +29,37 @@ module.exports = {
         });
       }
 
-      // =============================
-      // VALIDAR QUE EL TRABAJO EXISTA
-      // =============================
+      // Validar que el trabajo exista
       const trabajo = await Trabajo.findByPk(trabajoId);
-
       if (!trabajo) {
         return res.status(404).json({
           error: "El trabajo no existe",
         });
       }
 
-      // =============================
-      // VALIDAR QUE EL EMPLEADOR EXISTA
-      // =============================
+      // Validar empleador
       if (!trabajo.empleadorId) {
         return res.status(400).json({
-          error: "Este trabajo no tiene un empleador asignado",
+          error: "Este trabajo no tiene empleador asignado",
         });
       }
 
       const empleador = await Empleador.findByPk(trabajo.empleadorId);
-
       if (!empleador) {
         return res.status(404).json({
           error: "El empleador no existe",
         });
       }
 
-      // =============================
-      // OBTENER DATOS DEL POSTULANTE
-      // =============================
+      // Datos del postulante
       const postulanteUser = await User.findByPk(userId);
+      if (!postulanteUser) {
+        return res.status(404).json({
+          error: "El usuario postulante no existe",
+        });
+      }
 
-      // =============================
-      // CREAR LA POSTULACIÓN
-      // =============================
+      // Crear postulación
       const nueva = await Postulacion.create({
         trabajoId,
         userId,
@@ -72,29 +67,20 @@ module.exports = {
         estado: "pendiente",
       });
 
-      // =============================
-      // 🔔 NOTIFICAR AL EMPLEADOR
-      // =============================
+      // 🔔 NOTIFICACIÓN (FORMA CORRECTA – SOLO 3 STRINGS)
       await crearNotificacion(
         empleador.userId,
         "Nueva postulación recibida",
-        `Un trabajador se ha postulado al trabajo: "${trabajo.titulo}".`,
-        {
-          postulante: {
-            userId: postulanteUser.id,
-            nombre: postulanteUser.nombre || "Trabajador",
-          },
-          trabajo: {
-            id: trabajo.id,
-            titulo: trabajo.titulo,
-          },
-        }
+        `El trabajador ${postulanteUser.nombre || "Trabajador"} se postuló al trabajo "${trabajo.titulo}".`
       );
 
-      return res.status(201).json({ postulacion: nueva });
+      return res.status(201).json({
+        ok: true,
+        postulacion: nueva,
+      });
 
-    } catch (err) {
-      console.error("❌ Error al crear postulación:", err);
+    } catch (error) {
+      console.error("❌ Error al crear postulación:", error);
       return res.status(500).json({
         error: "Error al crear postulación",
       });
@@ -102,7 +88,7 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔹 Listar postulaciones de un trabajo (FIX DEFINITIVO)
+  // 🔹 Listar postulaciones de un trabajo (EMPLEADOR)
   // ======================================================
   async porTrabajo(req, res) {
     try {
@@ -120,14 +106,13 @@ module.exports = {
         order: [["createdAt", "DESC"]],
       });
 
-      // 🔥 FIX REAL: ENVIAR userId EXPLÍCITO
       const postulaciones = lista.map((p) => ({
         id: p.id,
         estado: p.estado,
         mensaje: p.mensaje,
         createdAt: p.createdAt,
         postulante: {
-          userId: p.postulante.id, // 🔥 ESTE ERA EL PROBLEMA
+          userId: p.postulante.id,
           nombre: p.postulante.nombre,
           email: p.postulante.email,
         },
@@ -135,8 +120,8 @@ module.exports = {
 
       return res.json({ postulaciones });
 
-    } catch (err) {
-      console.error("❌ Error al listar postulaciones:", err);
+    } catch (error) {
+      console.error("❌ Error al listar postulaciones:", error);
       return res.status(500).json({
         error: "Error al obtener postulaciones",
       });
@@ -144,15 +129,44 @@ module.exports = {
   },
 
   // ======================================================
-  // 🔹 Cambiar estado (pendiente / aceptado / rechazado)
+  // 🔹 Listar postulaciones por usuario (TRABAJADOR)
+  // ======================================================
+  async porUsuario(req, res) {
+    try {
+      const { userId } = req.params;
+
+      const postulaciones = await Postulacion.findAll({
+        where: { userId },
+        include: [
+          {
+            model: Trabajo,
+            as: "trabajo",
+            attributes: ["id", "titulo", "estado", "createdAt"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+
+      return res.json({ postulaciones });
+
+    } catch (error) {
+      console.error("❌ Error al listar postulaciones del usuario:", error);
+      return res.status(500).json({
+        error: "Error al obtener postulaciones del usuario",
+      });
+    }
+  },
+
+  // ======================================================
+  // 🔹 Cambiar estado de postulación (EMPLEADOR)
   // ======================================================
   async cambiarEstado(req, res) {
     try {
       const { id } = req.params;
       const { estado } = req.body;
 
-      const validos = ["pendiente", "aceptado", "rechazado"];
-      if (!validos.includes(estado)) {
+      const estadosValidos = ["pendiente", "aceptado", "rechazado"];
+      if (!estadosValidos.includes(estado)) {
         return res.status(400).json({
           error: "Estado inválido",
         });
@@ -171,14 +185,17 @@ module.exports = {
       // 🔔 Notificar al trabajador
       await crearNotificacion(
         post.userId,
-        "Actualización de tu postulación",
+        "Estado de tu postulación",
         `Tu postulación fue ${estado}.`
       );
 
-      return res.json({ postulacion: post });
+      return res.json({
+        ok: true,
+        postulacion: post,
+      });
 
-    } catch (err) {
-      console.error("❌ Error al cambiar estado:", err);
+    } catch (error) {
+      console.error("❌ Error al cambiar estado:", error);
       return res.status(500).json({
         error: "Error al cambiar estado",
       });
