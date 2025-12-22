@@ -1,9 +1,33 @@
-'use strict';
+"use strict";
 
-const { PerfilLaboral, Trabajador, User } = require('../models');
+const path = require("path");
+const fs = require("fs");
+const { PerfilLaboral } = require("../models");
 
 // =======================================================
-// 🔹 1. Crear perfil laboral
+// 📂 Carpeta uploads para records policiales
+// =======================================================
+const UPLOADS_DIR = path.join(__dirname, "..", "uploads", "trabajadores", "records");
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// =======================================================
+// 🧩 Guardar récord policial (PDF/IMG) en disco
+// =======================================================
+function guardarRecordPolicial(file, userId) {
+  const ext = path.extname(file.originalname || "");
+  const nombre = `record_policial_${userId}_${Date.now()}${ext}`;
+  const ruta = path.join(UPLOADS_DIR, nombre);
+
+  fs.writeFileSync(ruta, file.buffer);
+
+  return `/uploads/trabajadores/records/${nombre}`;
+}
+
+// =======================================================
+// 🔹 1. Crear perfil laboral (✅ record opcional)
 // =======================================================
 exports.crearPerfilLaboral = async (req, res) => {
   try {
@@ -18,37 +42,47 @@ exports.crearPerfilLaboral = async (req, res) => {
       descripcion,
       direccion,
       horario,
-      experiencia
+      experiencia,
+      tipoPersona, // ✅ NUEVO
     } = req.body;
 
     // Verificar si ya existe un perfil para este usuario
     const existente = await PerfilLaboral.findOne({ where: { userId } });
     if (existente) {
-      return res.status(400).json({ message: 'El perfil ya existe' });
+      return res.status(400).json({ message: "El perfil ya existe" });
+    }
+
+    // ✅ OPCIONAL: si llega archivo, guardarlo; si no, queda null
+    let recordPolicialUrl = null;
+    if (req.file) {
+      recordPolicialUrl = guardarRecordPolicial(req.file, userId);
     }
 
     // Crear el perfil
     const perfil = await PerfilLaboral.create({
       userId,
       nombreCompleto,
-      cedulaRuc,
+      cedulaRuc: cedulaRuc || null,
       telefono,
       nombreComercial,
       categoria,
       descripcion,
       direccion,
       horario,
-      experiencia
+      experiencia: Number(experiencia) || 0,
+
+      // ✅ NUEVOS
+      tipoPersona: tipoPersona === "JURIDICA" ? "JURIDICA" : "NATURAL",
+      recordPolicialUrl,
     });
 
     return res.status(201).json({
-      message: 'Perfil creado correctamente',
-      perfil
+      message: "Perfil creado correctamente",
+      perfil,
     });
-
   } catch (error) {
     console.error("❌ Error al crear perfil:", error);
-    return res.status(500).json({ message: 'Error al crear perfil laboral' });
+    return res.status(500).json({ message: "Error al crear perfil laboral" });
   }
 };
 
@@ -62,17 +96,16 @@ exports.obtenerPerfilDelTrabajador = async (req, res) => {
     const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
     if (!perfil) {
-      return res.status(404).json({ message: 'No tienes perfil creado aún' });
+      return res.status(404).json({ message: "No tienes perfil creado aún" });
     }
 
     return res.json({
-      message: 'Perfil obtenido correctamente',
-      perfil
+      message: "Perfil obtenido correctamente",
+      perfil,
     });
-
   } catch (error) {
     console.error("❌ Error obteniendo perfil:", error);
-    return res.status(500).json({ message: 'Error al obtener perfil' });
+    return res.status(500).json({ message: "Error al obtener perfil" });
   }
 };
 
@@ -86,17 +119,16 @@ exports.verificarPerfilExistente = async (req, res) => {
     const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
     return res.json({
-      exists: perfil ? true : false
+      exists: perfil ? true : false,
     });
-
   } catch (error) {
     console.error("❌ Error verificando perfil:", error);
-    return res.status(500).json({ message: 'Error en verificación' });
+    return res.status(500).json({ message: "Error en verificación" });
   }
 };
 
 // =======================================================
-// 🔹 4. Actualizar perfil laboral
+// 🔹 4. Actualizar perfil laboral (archivo opcional)
 // =======================================================
 exports.actualizarPerfilLaboral = async (req, res) => {
   try {
@@ -105,19 +137,42 @@ exports.actualizarPerfilLaboral = async (req, res) => {
     const perfil = await PerfilLaboral.findOne({ where: { userId } });
 
     if (!perfil) {
-      return res.status(404).json({ message: 'No tienes perfil creado aún' });
+      return res.status(404).json({ message: "No tienes perfil creado aún" });
     }
 
-    await perfil.update(req.body);
+    // Mantener récord anterior si no llega archivo nuevo
+    let recordPolicialUrl = perfil.recordPolicialUrl;
+
+    // Si llega nuevo archivo, reemplazar (y borrar el anterior)
+    if (req.file) {
+      if (recordPolicialUrl && recordPolicialUrl.startsWith("/uploads/")) {
+        const oldAbs = path.join(__dirname, "..", recordPolicialUrl);
+        if (fs.existsSync(oldAbs)) fs.unlinkSync(oldAbs);
+      }
+      recordPolicialUrl = guardarRecordPolicial(req.file, userId);
+    }
+
+    const data = { ...req.body, recordPolicialUrl };
+
+    // Normalizar experiencia
+    if (data.experiencia !== undefined) {
+      data.experiencia = Number(data.experiencia) || 0;
+    }
+
+    // Normalizar tipoPersona
+    if (data.tipoPersona !== undefined) {
+      data.tipoPersona = data.tipoPersona === "JURIDICA" ? "JURIDICA" : "NATURAL";
+    }
+
+    await perfil.update(data);
 
     return res.json({
-      message: 'Perfil actualizado correctamente',
-      perfil
+      message: "Perfil actualizado correctamente",
+      perfil,
     });
-
   } catch (error) {
     console.error("❌ Error actualizando perfil:", error);
-    return res.status(500).json({ message: 'Error al actualizar perfil laboral' });
+    return res.status(500).json({ message: "Error al actualizar perfil laboral" });
   }
 };
 
@@ -129,12 +184,11 @@ exports.obtenerTodosPerfilesLaborales = async (req, res) => {
     const perfiles = await PerfilLaboral.findAll();
 
     return res.json({
-      message: 'Perfiles obtenidos correctamente',
-      perfiles
+      message: "Perfiles obtenidos correctamente",
+      perfiles,
     });
-
   } catch (error) {
     console.error("❌ Error obteniendo perfiles:", error);
-    return res.status(500).json({ message: 'Error al obtener perfiles laborales' });
+    return res.status(500).json({ message: "Error al obtener perfiles laborales" });
   }
 };

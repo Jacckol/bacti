@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 const db = require("../models");
 const { Op } = require("sequelize");
@@ -7,7 +7,6 @@ const { crearNotificacion } = require("../methods/notificar");
 const { Servicio, Postulacion, User } = db;
 
 module.exports = {
-
   // =====================================================
   // 🟢 CREAR SERVICIO
   // POST /api/servicios
@@ -136,9 +135,14 @@ module.exports = {
   // =====================================================
   async crearPostulacionServicio(req, res) {
     try {
-      const servicioId = Number(req.params.servicioId);
+      // ✅ tolerante: si tu router usa :id en vez de :servicioId
+      const raw = req.params.servicioId ?? req.params.id;
+      const servicioId = Number(raw);
+
       const userId = Number(req.body.userId);
       const { mensaje } = req.body;
+
+      console.log("🟦 crearPostulacionServicio params:", req.params, "body:", req.body);
 
       if (!servicioId || !userId) {
         return res.status(400).json({
@@ -146,15 +150,39 @@ module.exports = {
         });
       }
 
-      // ✅ IMPORTANTE: Number(servicioId) para evitar string
-      const servicio = await Servicio.findByPk(servicioId);
+      // ✅ FIX REAL: buscar servicio sin romper si NO existe columna servicioId/servicio_id
+      const orWhere = [{ id: servicioId }];
+
+      // Solo agrega condiciones si esos campos existen en el MODELO
+      if (Servicio?.rawAttributes?.servicioId) {
+        orWhere.push({ servicioId });
+      }
+      if (Servicio?.rawAttributes?.servicio_id) {
+        orWhere.push({ servicio_id: servicioId });
+      }
+
+      const servicio = await Servicio.findOne({
+        where: { [Op.or]: orWhere },
+      });
+
       if (!servicio) {
+        // 🔎 DEBUG: imprime ids reales (para que veas si 17 existe en ESA BD)
+        const ultimos = await Servicio.findAll({
+          attributes: ["id"],
+          order: [["id", "DESC"]],
+          limit: 10,
+        });
+
+        console.log("❌ Servicio NO encontrado:", servicioId, "Últimos ids:", ultimos.map((x) => x.id));
+
         return res.status(404).json({ error: "Servicio no existe" });
       }
 
-      // ✅ IMPORTANTE: Number(...) para evitar string
+      // ✅ SIEMPRE usa el id real del servicio encontrado
+      const servicioRealId = Number(servicio.id);
+
       const existe = await Postulacion.findOne({
-        where: { servicioId, userId },
+        where: { servicioId: servicioRealId, userId },
       });
 
       if (existe) {
@@ -171,7 +199,7 @@ module.exports = {
       }
 
       const nueva = await Postulacion.create({
-        servicioId,
+        servicioId: servicioRealId,
         userId,
         mensaje: mensaje || "",
         estado: "pendiente",
@@ -190,6 +218,43 @@ module.exports = {
     } catch (error) {
       console.error("❌ Error crear postulación:", error);
       return res.status(500).json({ error: "Error al crear postulación" });
+    }
+  },
+
+  // =====================================================
+  // ✅ NUEVO: LISTAR POSTULACIONES DE UN SERVICIO
+  // GET /api/servicios/:servicioId/postulaciones
+  // =====================================================
+  async listarPostulacionesServicio(req, res) {
+    try {
+      const servicioId = Number(req.params.servicioId);
+
+      if (!servicioId) {
+        return res.status(400).json({ error: "servicioId inválido" });
+      }
+
+      // validar que exista servicio
+      const servicio = await Servicio.findByPk(servicioId);
+      if (!servicio) {
+        return res.status(404).json({ error: "Servicio no existe" });
+      }
+
+      const postulaciones = await Postulacion.findAll({
+        where: { servicioId },
+        include: [
+          {
+            model: User,
+            as: "postulante",
+            attributes: ["id", "nombre", "email"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
+
+      return res.json(postulaciones);
+    } catch (error) {
+      console.error("❌ Error listarPostulacionesServicio:", error);
+      return res.status(500).json({ error: "Error listando postulaciones" });
     }
   },
 

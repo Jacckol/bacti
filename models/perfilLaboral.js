@@ -1,5 +1,5 @@
-'use strict';
-const { Model } = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   class PerfilLaboral extends Model {
@@ -15,10 +15,17 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: 'users',
-          key: 'id',
+          model: "users",
+          key: "id",
         },
-        onDelete: 'CASCADE',
+        onDelete: "CASCADE",
+      },
+
+      // ✅ NUEVO: tipo de persona (mejor STRING para no romper sync alter)
+      tipoPersona: {
+        type: DataTypes.STRING, // "NATURAL" | "JURIDICA"
+        allowNull: false,
+        defaultValue: "NATURAL",
       },
 
       nombreCompleto: {
@@ -65,11 +72,17 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
+
+      // ✅ NUEVO: URL del récord policial guardado
+      recordPolicialUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       sequelize,
-      modelName: 'PerfilLaboral',
-      tableName: 'perfiles_laborales',
+      modelName: "PerfilLaboral",
+      tableName: "perfiles_laborales",
       timestamps: true,
     }
   );

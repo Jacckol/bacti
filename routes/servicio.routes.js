@@ -38,6 +38,10 @@ router.delete("/:id", servicioCtrl.eliminar);
 // Crear postulación a un servicio
 router.post("/:servicioId/postulaciones", servicioCtrl.crearPostulacionServicio);
 
+// ✅ NUEVO: LISTAR postulaciones de un servicio
+// GET /api/servicios/:servicioId/postulaciones
+router.get("/:servicioId/postulaciones", servicioCtrl.listarPostulacionesServicio);
+
 // Cambiar estado de postulación (aceptar / rechazar)
 router.patch(
   "/postulaciones/:id/estado",
