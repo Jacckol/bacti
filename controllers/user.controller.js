@@ -1,6 +1,12 @@
 'use strict';
 
-const { User, Trabajador, Empleador, PerfilLaboral } = require('../models');
+const {
+  User,
+  Trabajador,
+  Empleador,
+  PerfilLaboral,
+  PerfilEmpleador
+} = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -9,7 +15,7 @@ const JWT_SECRET = 'TU_SECRETO_JWT_AQUI';
 module.exports = {
 
   // =====================================================
-  // REGISTRO (COMPATIBLE CON FRONT ANTIGUO)
+  // REGISTRO (NO SE TOCA)
   // =====================================================
   async registrar(req, res) {
     try {
@@ -27,7 +33,6 @@ module.exports = {
         ruc
       } = req.body;
 
-      // 👉 compatibilidad total con el front antiguo
       if (!rol) rol = 'trabajador';
 
       if (!nombre || !email || !password) {
@@ -41,7 +46,6 @@ module.exports = {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // ===== USER =====
       const user = await User.create({
         nombre,
         email,
@@ -52,10 +56,9 @@ module.exports = {
       let trabajador = null;
       let empleador = null;
 
-      // ===== TRABAJADOR =====
       if (rol === 'trabajador') {
         trabajador = await Trabajador.create({
-          nombre: nombre,
+          nombre,
           telefono: telefono || '',
           direccion: direccion || '',
           categoria: categoria || '',
@@ -66,10 +69,9 @@ module.exports = {
         });
       }
 
-      // ===== EMPLEADOR =====
       if (rol === 'empleador') {
         empleador = await Empleador.create({
-          nombre: nombre,
+          nombre,
           empresa: empresa || '',
           ruc: ruc || '',
           telefono: telefono || '',
@@ -96,19 +98,20 @@ module.exports = {
   },
 
   // =====================================================
-  // LOGIN (ESTABLE)
+  // LOGIN (CORRECTO Y DEFINITIVO)
   // =====================================================
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      const user = await User.findOne({
-        where: { email },
-        include: [
-          { model: Trabajador, as: 'trabajador' },
-          { model: Empleador, as: 'empleador' },
-        ],
-      });
+      if (!email || !password) {
+        return res.json({
+          success: false,
+          msg: 'Faltan credenciales',
+        });
+      }
+
+      const user = await User.findOne({ where: { email } });
 
       if (!user) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -125,21 +128,62 @@ module.exports = {
         { expiresIn: '1d' }
       );
 
-      const perfil = await PerfilLaboral.findOne({
-        where: { userId: user.id },
-      });
+      // ===============================
+      // 🔹 BUSCAR PERFIL SEGÚN ROL
+      // ===============================
+      let empleadorData = null;
+      let trabajadorData = null;
+      let perfilCompleto = false;
 
+      if (user.rol === 'empleador') {
+        const empleador = await Empleador.findOne({
+          where: { userId: user.id },
+        });
+
+        if (empleador) {
+          empleadorData = { id: empleador.id };
+
+          const perfil = await PerfilEmpleador.findOne({
+            where: { empleadorId: empleador.id },
+          });
+
+          perfilCompleto = !!perfil;
+        }
+      }
+
+      if (user.rol === 'trabajador') {
+        const trabajador = await Trabajador.findOne({
+          where: { userId: user.id },
+        });
+
+        if (trabajador) {
+          trabajadorData = { id: trabajador.id };
+
+          const perfil = await PerfilLaboral.findOne({
+            where: { userId: user.id },
+          });
+
+          perfilCompleto = !!perfil;
+        }
+      }
+
+      // ===============================
+      // 🔥 RESPUESTA FINAL
+      // ===============================
       return res.json({
+        success: true,
+        msg: 'Inicio de sesión exitoso',
         token,
         rol: user.rol,
-        perfilCompleto: !!perfil,
+        perfilCompleto,
         user: {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
+          rol: user.rol,
         },
-        trabajador: user.trabajador || null,
-        empleador: user.empleador || null,
+        empleador: empleadorData,
+        trabajador: trabajadorData,
       });
 
     } catch (error) {

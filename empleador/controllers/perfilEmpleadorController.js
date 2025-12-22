@@ -13,7 +13,7 @@ exports.obtenerNombre = async (req, res) => {
 
     const empleador = await Empleador.findOne({
       where: { userId },
-      include: [{ model: User, attributes: ["nombre"] }]
+      include: [{ model: User, attributes: ["nombre"] }],
     });
 
     if (!empleador) {
@@ -22,34 +22,52 @@ exports.obtenerNombre = async (req, res) => {
 
     return res.json({
       userId,
-      nombre: empleador.User?.nombre || "Sin nombre"
+      nombre: empleador.User?.nombre || "Sin nombre",
     });
-
   } catch (error) {
     console.error("❌ Error al obtener nombre:", error);
-    return res.status(500).json({ message: "Error interno", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error interno", error: error.message });
   }
 };
 
 // ==========================================================
-// 🔹 CREAR PERFIL DEL EMPLEADOR
+// 🔹 CREAR PERFIL DEL EMPLEADOR (EXTENDIDO)
 // ==========================================================
 exports.crearPerfil = async (req, res) => {
   try {
-    const { empleadorId, ubicacion, categoria, experiencia, biografia, habilidades } = req.body;
+    const {
+      empleadorId,
+      ubicacion,
+      categoria,
+      experiencia,
+      biografia,
+      habilidades,
+
+      // 🔹 NUEVOS
+      tipoEmpleador,
+      empresaNombre,
+      ruc,
+    } = req.body;
 
     const idNum = parseInt(empleadorId, 10);
     if (isNaN(idNum) || idNum <= 0)
       return res.status(400).json({ message: "ID de empleador inválido" });
 
     const empleador = await Empleador.findByPk(idNum);
-    if (!empleador) return res.status(404).json({ message: "El empleador no existe" });
+    if (!empleador)
+      return res.status(404).json({ message: "El empleador no existe" });
 
-    const existePerfil = await PerfilEmpleador.findOne({ where: { empleadorId: idNum } });
+    const existePerfil = await PerfilEmpleador.findOne({
+      where: { empleadorId: idNum },
+    });
     if (existePerfil)
       return res.status(400).json({ message: "El perfil ya existe, usa PUT" });
 
-    // Parseo de habilidades JSON
+    // ===============================
+    // Parseo habilidades
+    // ===============================
     let habilidadesArray = [];
     if (habilidades) {
       try {
@@ -57,25 +75,59 @@ exports.crearPerfil = async (req, res) => {
       } catch {}
     }
 
-    // Rutas de carpetas
+    // ===============================
+    // Carpetas
+    // ===============================
     const carpetaCV = path.join(__dirname, "../../uploads/empleador/cv");
     const carpetaFoto = path.join(__dirname, "../../uploads/empleador/foto");
+    const carpetaRecord = path.join(
+      __dirname,
+      "../../uploads/empleador/record"
+    );
+
     fs.mkdirSync(carpetaCV, { recursive: true });
     fs.mkdirSync(carpetaFoto, { recursive: true });
+    fs.mkdirSync(carpetaRecord, { recursive: true });
 
     let cvUrl = null;
     let fotoUrl = null;
+    let recordPolicialUrl = null;
 
+    // ===============================
+    // CV
+    // ===============================
     if (req.files?.cv?.length > 0) {
       const cvName = `cv_${idNum}_${Date.now()}.pdf`;
       fs.writeFileSync(path.join(carpetaCV, cvName), req.files.cv[0].buffer);
       cvUrl = `/uploads/empleador/cv/${cvName}`;
     }
 
+    // ===============================
+    // FOTO
+    // ===============================
     if (req.files?.foto?.length > 0) {
       const fotoName = `foto_${idNum}_${Date.now()}.jpg`;
-      fs.writeFileSync(path.join(carpetaFoto, fotoName), req.files.foto[0].buffer);
+      fs.writeFileSync(
+        path.join(carpetaFoto, fotoName),
+        req.files.foto[0].buffer
+      );
       fotoUrl = `/uploads/empleador/foto/${fotoName}`;
+    }
+
+    // ===============================
+    // 🔥 RECORD POLICIAL (PDF)
+    // ===============================
+    if (req.files?.recordPolicial?.length > 0) {
+      const recordName = `record_${idNum}_${Date.now()}.pdf`;
+      fs.writeFileSync(
+        path.join(carpetaRecord, recordName),
+        req.files.recordPolicial[0].buffer
+      );
+      recordPolicialUrl = `/uploads/empleador/record/${recordName}`;
+    } else {
+      return res.status(400).json({
+        message: "Debe subir el récord policial en PDF",
+      });
     }
 
     const perfil = await PerfilEmpleador.create({
@@ -87,28 +139,44 @@ exports.crearPerfil = async (req, res) => {
       habilidades: habilidadesArray,
       cvUrl,
       fotoUrl,
+
+      // 🔹 NUEVOS CAMPOS
+      tipoEmpleador: tipoEmpleador || "NATURAL",
+      empresaNombre: tipoEmpleador === "JURIDICA" ? empresaNombre : null,
+      ruc: tipoEmpleador === "JURIDICA" ? ruc : null,
+      recordPolicialUrl,
+      estadoVerificacion: "pendiente",
     });
 
-    res.status(201).json({ message: "Perfil creado correctamente", perfil });
-
+    res.status(201).json({
+      message: "Perfil creado correctamente",
+      perfil,
+    });
   } catch (error) {
     console.error("❌ Error al crear perfil:", error);
-    return res.status(500).json({ message: "Error al crear perfil", error: error.message });
+    return res.status(500).json({
+      message: "Error al crear perfil",
+      error: error.message,
+    });
   }
 };
 
 // ==========================================================
-// 🔹 ACTUALIZAR PERFIL DEL EMPLEADOR
+// 🔹 ACTUALIZAR PERFIL DEL EMPLEADOR (EXTENDIDO)
 // ==========================================================
 exports.actualizarPerfil = async (req, res) => {
   try {
     const { empleadorId } = req.params;
 
-    const perfil = await PerfilEmpleador.findOne({ where: { empleadorId } });
+    const perfil = await PerfilEmpleador.findOne({
+      where: { empleadorId },
+    });
     if (!perfil)
       return res.status(404).json({ message: "Perfil no encontrado" });
 
-    // Parsear habilidades si llegan
+    // ===============================
+    // Parsear habilidades
+    // ===============================
     let habilidadesArray = perfil.habilidades;
     if (req.body.habilidades) {
       try {
@@ -118,35 +186,81 @@ exports.actualizarPerfil = async (req, res) => {
 
     const carpetaCV = path.join(__dirname, "../../uploads/empleador/cv");
     const carpetaFoto = path.join(__dirname, "../../uploads/empleador/foto");
+    const carpetaRecord = path.join(
+      __dirname,
+      "../../uploads/empleador/record"
+    );
+
     fs.mkdirSync(carpetaCV, { recursive: true });
     fs.mkdirSync(carpetaFoto, { recursive: true });
+    fs.mkdirSync(carpetaRecord, { recursive: true });
 
-    // Guardar archivos si vienen
+    // ===============================
+    // Archivos
+    // ===============================
     if (req.files?.cv?.length > 0) {
       const cvName = `cv_${empleadorId}_${Date.now()}.pdf`;
-      fs.writeFileSync(path.join(carpetaCV, cvName), req.files.cv[0].buffer);
+      fs.writeFileSync(
+        path.join(carpetaCV, cvName),
+        req.files.cv[0].buffer
+      );
       perfil.cvUrl = `/uploads/empleador/cv/${cvName}`;
     }
 
     if (req.files?.foto?.length > 0) {
       const fotoName = `foto_${empleadorId}_${Date.now()}.jpg`;
-      fs.writeFileSync(path.join(carpetaFoto, fotoName), req.files.foto[0].buffer);
+      fs.writeFileSync(
+        path.join(carpetaFoto, fotoName),
+        req.files.foto[0].buffer
+      );
       perfil.fotoUrl = `/uploads/empleador/foto/${fotoName}`;
     }
 
-    // Actualizar campos
+    if (req.files?.recordPolicial?.length > 0) {
+      const recordName = `record_${empleadorId}_${Date.now()}.pdf`;
+      fs.writeFileSync(
+        path.join(carpetaRecord, recordName),
+        req.files.recordPolicial[0].buffer
+      );
+      perfil.recordPolicialUrl = `/uploads/empleador/record/${recordName}`;
+      perfil.estadoVerificacion = "pendiente"; // vuelve a revisión
+    }
+
+    // ===============================
+    // Campos normales
+    // ===============================
     perfil.ubicacion = req.body.ubicacion ?? perfil.ubicacion;
     perfil.categoria = req.body.categoria ?? perfil.categoria;
-    perfil.experiencia = req.body.experiencia ? parseInt(req.body.experiencia, 10) : perfil.experiencia;
+    perfil.experiencia = req.body.experiencia
+      ? parseInt(req.body.experiencia, 10)
+      : perfil.experiencia;
     perfil.biografia = req.body.biografia ?? perfil.biografia;
     perfil.habilidades = habilidadesArray;
 
+    // ===============================
+    // NUEVOS
+    // ===============================
+    perfil.tipoEmpleador = req.body.tipoEmpleador ?? perfil.tipoEmpleador;
+    perfil.empresaNombre =
+      perfil.tipoEmpleador === "JURIDICA"
+        ? req.body.empresaNombre ?? perfil.empresaNombre
+        : null;
+    perfil.ruc =
+      perfil.tipoEmpleador === "JURIDICA"
+        ? req.body.ruc ?? perfil.ruc
+        : null;
+
     await perfil.save();
 
-    res.json({ message: "Perfil actualizado correctamente", perfil });
-
+    res.json({
+      message: "Perfil actualizado correctamente",
+      perfil,
+    });
   } catch (error) {
     console.error("❌ Error al actualizar perfil:", error);
-    return res.status(500).json({ message: "Error al actualizar perfil", error: error.message });
+    return res.status(500).json({
+      message: "Error al actualizar perfil",
+      error: error.message,
+    });
   }
 };

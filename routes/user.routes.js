@@ -2,11 +2,20 @@
 
 const express = require('express');
 const router = express.Router();
-const { User, Trabajador, Empleador } = require('../models');
 const bcrypt = require('bcrypt');
 
+const { User, Trabajador, Empleador } = require('../models');
+
+// 🔥 IMPORTANTE: USAR EL CONTROLLER CORRECTO
+const userController = require('../controllers/user.controller');
+
 // =====================================================
-// 🔥 REGISTRO UNIFICADO (TRABAJADOR + EMPLEADOR)
+// 🔥 LOGIN (AQUÍ ESTABA EL PROBLEMA)
+// =====================================================
+router.post('/login', userController.login);
+
+// =====================================================
+// 🔥 REGISTRO UNIFICADO (SE MANTIENE)
 // =====================================================
 router.post('/register', async (req, res) => {
   try {
@@ -16,19 +25,15 @@ router.post('/register', async (req, res) => {
       empresa, ruc, responsable
     } = req.body;
 
-    // Validación básica
     if (!nombre || !email || !password || !rol) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
-    // Validar email existente
     const existing = await User.findOne({ where: { email } });
     if (existing) return res.status(400).json({ error: 'El correo ya existe' });
 
-    // Encriptar contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Crear usuario
     const newUser = await User.create({
       nombre,
       email,
@@ -39,9 +44,6 @@ router.post('/register', async (req, res) => {
     let trabajador = null;
     let empleador = null;
 
-    // =====================================================
-    // 🟩 REGISTRO TRABAJADOR
-    // =====================================================
     if (rol === 'trabajador') {
       trabajador = await Trabajador.create({
         userId: newUser.id,
@@ -53,15 +55,10 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // =====================================================
-    // 🟦 REGISTRO EMPLEADOR
-    // (Tu modelo exige responsable y direccion OBLIGATORIOS)
-    // =====================================================
     if (rol === 'empleador') {
-      // Validar campos obligatorios para tu modelo
       if (!empresa || !ruc || !responsable || !direccion) {
         return res.status(400).json({
-          error: "Faltan campos obligatorios para empleador (empresa, ruc, responsable, direccion)"
+          error: "Faltan campos obligatorios para empleador"
         });
       }
 
@@ -89,9 +86,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // =====================================================
-// LISTAR TODOS (TRABAJADORES + EMPLEADORES)
+// LISTAR TODOS
 // =====================================================
 router.get('/users', async (req, res) => {
   try {
@@ -103,13 +99,10 @@ router.get('/users', async (req, res) => {
     });
 
     res.json({ message: 'Usuarios obtenidos correctamente', users });
-
   } catch (err) {
-    console.error('❌ Error al obtener usuarios:', err);
     res.status(500).json({ error: 'Error al obtener usuarios' });
   }
 });
-
 
 // =====================================================
 // OBTENER USUARIO POR ID
@@ -125,14 +118,11 @@ router.get('/users/:id', async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    res.json({ message: 'Usuario obtenido correctamente', user });
-
+    res.json({ user });
   } catch (err) {
-    console.error('❌ Error al obtener usuario:', err);
     res.status(500).json({ error: 'Error al obtener usuario' });
   }
 });
-
 
 // =====================================================
 // ELIMINAR USUARIO
@@ -140,19 +130,14 @@ router.get('/users/:id', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
-
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     await user.destroy();
-
     res.json({ message: 'Usuario eliminado correctamente' });
-
   } catch (err) {
-    console.error('❌ Error al eliminar usuario:', err);
     res.status(500).json({ error: 'Error al eliminar usuario' });
   }
 });
-
 
 // =====================================================
 // ACTUALIZAR USUARIO
@@ -165,13 +150,10 @@ router.put('/users/:id', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     if (password) user.password = await bcrypt.hash(password, 10);
-
     await user.update({ nombre, email, rol });
 
     res.json({ message: 'Usuario actualizado correctamente', user });
-
   } catch (err) {
-    console.error('❌ Error al actualizar usuario:', err);
     res.status(500).json({ error: 'Error al actualizar usuario' });
   }
 });

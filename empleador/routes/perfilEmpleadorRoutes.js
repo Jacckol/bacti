@@ -7,11 +7,13 @@ const multer = require("multer");
 // Import correcto del controller
 const perfilEmpleadorController = require("../controllers/perfilEmpleadorController");
 
-// Multer: archivos en memoria
+// ============================================================
+// 🔹 Multer: archivos en memoria (NO rompe nada existente)
+// ============================================================
 const upload = multer({ storage: multer.memoryStorage() });
 
 /* ============================================================
-   🔹 Obtener nombre del empleador por userId
+   🔹 Obtener nombre del empleador por userId (SE MANTIENE)
 =============================================================== */
 router.get("/nombre/:userId", async (req, res) => {
   try {
@@ -27,7 +29,7 @@ router.get("/nombre/:userId", async (req, res) => {
         {
           model: User,
           attributes: ["nombre"],
-          as: "usuario"
+          as: "usuario",
         },
       ],
     });
@@ -39,7 +41,6 @@ router.get("/nombre/:userId", async (req, res) => {
       empleadorId: empleador.id,
       nombre: empleador.usuario?.nombre || "Sin nombre",
     });
-
   } catch (error) {
     console.error("❌ Error:", error);
     res.status(500).json({
@@ -50,27 +51,33 @@ router.get("/nombre/:userId", async (req, res) => {
 });
 
 /* ============================================================
-   🔹 Crear perfil del empleador
+   🔹 Crear perfil del empleador (EXTENDIDO, NO ROMPE)
 =============================================================== */
 router.post(
   "/",
   upload.fields([
     { name: "foto", maxCount: 1 },
     { name: "cv", maxCount: 1 },
+
+    // 🔥 NUEVO (PDF obligatorio)
+    { name: "recordPolicial", maxCount: 1 },
   ]),
-  perfilEmpleadorController.crearPerfil   // ← CORREGIDO
+  perfilEmpleadorController.crearPerfil
 );
 
 /* ============================================================
-   🔹 Actualizar perfil del empleador
+   🔹 Actualizar perfil del empleador (EXTENDIDO, NO ROMPE)
 =============================================================== */
 router.put(
   "/:empleadorId",
   upload.fields([
     { name: "foto", maxCount: 1 },
     { name: "cv", maxCount: 1 },
+
+    // 🔥 NUEVO (opcional en update)
+    { name: "recordPolicial", maxCount: 1 },
   ]),
-  perfilEmpleadorController.actualizarPerfil  // ← CORREGIDO
+  perfilEmpleadorController.actualizarPerfil
 );
 
 module.exports = router;

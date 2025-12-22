@@ -4,7 +4,6 @@ const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class PerfilEmpleador extends Model {
     static associate(models) {
-      // 🔹 Un perfil pertenece a un Empleador
       PerfilEmpleador.belongsTo(models.Empleador, {
         foreignKey: "empleadorId",
         as: "empleadorInfo",
@@ -18,46 +17,35 @@ module.exports = (sequelize, DataTypes) => {
       empleadorId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-          model: "empleadores",
-          key: "id",
-        },
-        onDelete: "CASCADE",
       },
 
-      ubicacion: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-
-      categoria: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-
-      experiencia: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-
-      biografia: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-
+      // ===== CAMPOS EXISTENTES =====
+      ubicacion: DataTypes.STRING,
+      categoria: DataTypes.STRING,
+      experiencia: DataTypes.INTEGER,
+      biografia: DataTypes.TEXT,
       habilidades: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [],
       },
+      fotoUrl: DataTypes.STRING,
+      cvUrl: DataTypes.STRING,
 
-      fotoUrl: {
-        type: DataTypes.STRING,
-        allowNull: true,
+      // ===== NUEVOS CAMPOS =====
+      tipoEmpleador: {
+        type: DataTypes.ENUM("NATURAL", "JURIDICA"),
+        allowNull: false,
+        defaultValue: "NATURAL",
       },
 
-      cvUrl: {
-        type: DataTypes.STRING,
-        allowNull: true,
+      empresaNombre: DataTypes.STRING,
+      ruc: DataTypes.STRING,
+
+      recordPolicialUrl: DataTypes.STRING,
+
+      estadoVerificacion: {
+        type: DataTypes.ENUM("pendiente", "aprobado", "rechazado"),
+        defaultValue: "pendiente",
       },
     },
     {
