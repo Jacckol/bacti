@@ -9,18 +9,31 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         autoIncrement: true,
       },
+
+      // quien postula (empleador o trabajador)
       userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+
+      // ✅ Postulación a TRABAJO (trabajador → empleador)
+      // ahora puede ser null porque también habrá postulaciones a servicios
       trabajoId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
+
+      // ✅ Postulación a SERVICIO (empleador → trabajador)
+      servicioId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+
       mensaje: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+
       estado: {
         type: DataTypes.ENUM("pendiente", "aceptado", "rechazado"),
         defaultValue: "pendiente",
@@ -33,14 +46,29 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Postulacion.associate = (models) => {
+    // ======================================================
+    // 👤 Postulante (User)
+    // ======================================================
     Postulacion.belongsTo(models.User, {
       as: "postulante",
       foreignKey: "userId",
     });
 
+    // ======================================================
+    // 💼 Relación con Trabajo (si aplica)
+    // ======================================================
     Postulacion.belongsTo(models.Trabajo, {
-      as: "trabajo",
+      as: "trabajo", // ✅ ok, no choca normalmente
       foreignKey: "trabajoId",
+    });
+
+    // ======================================================
+    // 🧰 Relación con Servicio (si aplica)
+    // ⚠️ IMPORTANTE: alias ÚNICO para que no choque
+    // ======================================================
+    Postulacion.belongsTo(models.Servicio, {
+      as: "servicioPostulado", // ✅ NO uses "servicio"
+      foreignKey: "servicioId",
     });
   };
 
